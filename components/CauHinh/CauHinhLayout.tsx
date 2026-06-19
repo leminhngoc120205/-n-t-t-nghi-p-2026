@@ -7,14 +7,9 @@ import { IMSSidebar } from '@/components/IMS/IMSSidebar'
 import { IMSTopBar } from '@/components/IMS/IMSTopBar'
 
 const sidebarItems = [
-  { href: '#',                         label: 'Quản lý phòng ban',        disabled: true  },
-  { href: '#',                         label: 'Menu chuyên mục',           disabled: true  },
   { href: '/cau-hinh/dong-su-kien',    label: 'Quản lý dòng sự kiện',     disabled: false },
   { href: '/cau-hinh/tac-gia',         label: 'Quản lý profile tác giả',  disabled: false },
   { href: '/cau-hinh/chu-de',          label: 'Quản lý chủ đề',           disabled: false },
-  { href: '#',                         label: 'Quản lý tag / nhãn',        disabled: true  },
-  { href: '#',                         label: 'Quản lý vị trí quảng cáo', disabled: true  },
-  { href: '#',                         label: 'Cài đặt hệ thống',         disabled: true  },
 ]
 
 export default function CauHinhLayout({ children }: { children: React.ReactNode }) {

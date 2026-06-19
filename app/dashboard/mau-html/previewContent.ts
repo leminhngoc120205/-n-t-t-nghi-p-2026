@@ -5,8 +5,9 @@ export const INTERACTIVE1_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Georgia,serif;color:#1a1a1a;overflow-x:hidden}
+body{font-family:'Be Vietnam Pro',system-ui,-apple-system,sans-serif;color:#1a1a1a;overflow-x:hidden}
 
 /* HERO */
 .hero{background:linear-gradient(180deg,#0a1628 0%,#0f2248 100%);color:white;padding:56px 40px;min-height:300px}

@@ -527,7 +527,7 @@ function ArticleDetailPanel({ article: a, showHistory, userRole, onToggleHistory
               <StatusBadge status={a.status}/>
               <span className="text-xs text-gray-400">{a.articleType}</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 leading-snug mb-4" style={{ fontFamily: 'Georgia, serif' }}>{a.title}</h1>
+            <h1 className="text-xl font-bold text-gray-900 leading-snug mb-4" style={{ fontFamily: 'var(--font-serif), Lora, serif' }}>{a.title}</h1>
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100 flex-wrap">
               <WorkflowTag icon="✍️" label="Viết bởi" name={writer}/>
               {editor    && <WorkflowTag icon="✏️" label="Biên tập bởi" name={editor}/>}
