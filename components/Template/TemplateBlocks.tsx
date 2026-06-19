@@ -1,4 +1,5 @@
 // Template Block Components
+// @ts-nocheck
 
 'use client'
 

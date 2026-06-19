@@ -41,7 +41,7 @@ function Content() {
   const [aiOpen,   setAiOpen]   = useState(false)
   const [aiVoice,  setAiVoice]  = useState<'f'|'m'>('f')
   const [aiSpd,    setAiSpd]    = useState(1)
-  const [alert,    setAlert]    = useState(false)
+  const [alertOpen, setAlertOpen] = useState(false)
   const seo = 42
 
   const tw = (id:Panel) => setPanel(p=>p===id?null:id)
@@ -87,7 +87,7 @@ function Content() {
         </div>
 
         <button className="px-3 py-1.5 text-xs font-semibold border border-gray-300 text-gray-600 rounded hover:bg-gray-50 transition-colors">Lưu nháp</button>
-        <button onClick={()=>{if(!title.trim()){setAlert(true);return}alert('Đã lưu: '+title)}}
+        <button onClick={()=>{if(!title.trim()){setAlertOpen(true);return}alert('Đã lưu: '+title)}}
           className="px-3 py-1.5 text-xs font-semibold bg-[#17a2b8] text-white rounded hover:bg-[#138496] transition-colors">Lưu bài viết</button>
         <button className="px-3 py-1.5 text-xs font-semibold bg-green-600 text-white rounded hover:bg-green-700 transition-colors">Lưu & Gửi lên</button>
       </div>
@@ -270,7 +270,7 @@ function Content() {
       </div>
 
       {/* Alert modal */}
-      {alert && (
+      {alertOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg shadow-xl p-6 w-80">
             <div className="flex items-center gap-3 mb-4">
@@ -282,7 +282,7 @@ function Content() {
                 <p className="text-xs text-gray-500 mt-0.5">Tiêu đề không được để trống</p>
               </div>
             </div>
-            <button onClick={()=>setAlert(false)} className="w-full py-2 bg-[#17a2b8] text-white text-sm font-semibold rounded hover:bg-[#138496] transition-colors">Đã hiểu</button>
+            <button onClick={()=>setAlertOpen(false)} className="w-full py-2 bg-[#17a2b8] text-white text-sm font-semibold rounded hover:bg-[#138496] transition-colors">Đã hiểu</button>
           </div>
         </div>
       )}

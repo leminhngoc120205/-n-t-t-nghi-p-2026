@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react'
 import { TemplateRenderer, DEFAULT_TEMPLATES } from '@/components/Template/TemplateRenderer'
 import { ArticleData, Template } from '@/lib/templates/types'
-import { LoadingSpinner } from '@/components/LoadingSpinner'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 interface TemplatePageProps {
   articleId: string

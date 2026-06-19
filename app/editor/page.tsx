@@ -233,7 +233,7 @@ export default function EditorPage() {
                 {step === 'content' && (
                   <ContentEditor
                     templateId={selectedTemplate}
-                    content={content}
+                    initialContent={content}
                     onContentChange={setContent}
                   />
                 )}

@@ -19,7 +19,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
   )
 
   // Mock data
-  const stats = [
+  const stats: Array<{ label: string; value: string; change: string; color: 'blue'|'amber'|'green'|'gold'; icon: string }> = [
     {
       label: 'Published Articles',
       value: '24',

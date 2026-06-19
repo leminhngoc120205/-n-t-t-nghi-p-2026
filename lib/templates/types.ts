@@ -404,7 +404,7 @@ export interface CustomBlockConfig {
  * Layout options for blocks
  */
 export interface LayoutOptions {
-  width?: 'full' | 'content' | 'narrow' | 'auto'
+  width?: 'full' | 'content' | 'narrow' | 'auto' | 'wide'
   margin?: 'none' | 'small' | 'medium' | 'large' | number
   padding?: 'none' | 'small' | 'medium' | 'large' | number
   spacing?: number // margin-bottom in px

@@ -18,6 +18,7 @@ interface HourlyPoint { time: string; View: number; User: number }
 interface SourceItem { label: string; percent: number; color: string }
 interface PanelData { userOnline: number; userOldTime: number; sources: SourceItem[] }
 
+// Full 24h data (0h–23h) — chart slices đến currentHour
 const MOCK: Record<ViewMode, { chart: HourlyPoint[]; panel: PanelData }> = {
   all: {
     chart: [
@@ -36,6 +37,15 @@ const MOCK: Record<ViewMode, { chart: HourlyPoint[]; panel: PanelData }> = {
       { time: '12h', View: 4200, User: 3080 },
       { time: '13h', View: 4650, User: 3410 },
       { time: '14h', View: 4300, User: 3150 },
+      { time: '15h', View: 4100, User: 3000 },
+      { time: '16h', View: 3800, User: 2780 },
+      { time: '17h', View: 4200, User: 3080 },
+      { time: '18h', View: 4500, User: 3300 },
+      { time: '19h', View: 4800, User: 3520 },
+      { time: '20h', View: 4600, User: 3370 },
+      { time: '21h', View: 4100, User: 3000 },
+      { time: '22h', View: 3200, User: 2340 },
+      { time: '23h', View: 2400, User: 1750 },
     ],
     panel: {
       userOnline: 539,
@@ -66,6 +76,15 @@ const MOCK: Record<ViewMode, { chart: HourlyPoint[]; panel: PanelData }> = {
       { time: '12h', View: 790, User: 442 },
       { time: '13h', View: 870, User: 487 },
       { time: '14h', View: 820, User: 459 },
+      { time: '15h', View: 790, User: 442 },
+      { time: '16h', View: 720, User: 403 },
+      { time: '17h', View: 810, User: 454 },
+      { time: '18h', View: 870, User: 487 },
+      { time: '19h', View: 920, User: 515 },
+      { time: '20h', View: 890, User: 498 },
+      { time: '21h', View: 790, User: 442 },
+      { time: '22h', View: 620, User: 347 },
+      { time: '23h', View: 480, User: 269 },
     ],
     panel: {
       userOnline: 139,
@@ -96,6 +115,15 @@ const MOCK: Record<ViewMode, { chart: HourlyPoint[]; panel: PanelData }> = {
       { time: '12h', View: 3410, User: 2638 },
       { time: '13h', View: 3780, User: 2923 },
       { time: '14h', View: 3480, User: 2691 },
+      { time: '15h', View: 3310, User: 2558 },
+      { time: '16h', View: 3080, User: 2377 },
+      { time: '17h', View: 3390, User: 2626 },
+      { time: '18h', View: 3630, User: 2813 },
+      { time: '19h', View: 3880, User: 3005 },
+      { time: '20h', View: 3710, User: 2872 },
+      { time: '21h', View: 3310, User: 2558 },
+      { time: '22h', View: 2580, User: 1993 },
+      { time: '23h', View: 1920, User: 1481 },
     ],
     panel: {
       userOnline: 400,
@@ -120,9 +148,18 @@ const TABS: { label: string; mode: ViewMode }[] = [
 export const IMSTrafficSection = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [liveCount, setLiveCount] = useState(MOCK.all.panel.userOnline)
+  const [currentHour, setCurrentHour] = useState(() => new Date().getHours())
   const baseRef = useRef(MOCK.all.panel.userOnline)
 
   const data = MOCK[viewMode]
+
+  // Cập nhật currentHour mỗi phút — khi qua giờ mới, trục X tự mọc thêm 1 cột
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCurrentHour(new Date().getHours())
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     baseRef.current = data.panel.userOnline
@@ -137,10 +174,13 @@ export const IMSTrafficSection = () => {
     return () => clearInterval(id)
   }, [viewMode])
 
+  // Chỉ hiển thị data từ 0h đến currentHour
+  const chartData = data.chart.slice(0, currentHour + 1)
+
   const growth = ((data.panel.userOnline - data.panel.userOldTime) / data.panel.userOldTime * 100).toFixed(2)
   const isPositive = data.panel.userOnline >= data.panel.userOldTime
 
-  const maxVal = Math.max(...data.chart.map(d => d.View))
+  const maxVal = Math.max(...chartData.map(d => d.View))
   const yMax = Math.ceil(maxVal / 1000) * 1000
   const yTicks = Array.from({ length: 5 }, (_, i) => Math.round((yMax / 4) * i))
 
@@ -203,7 +243,7 @@ export const IMSTrafficSection = () => {
         </div>
 
         <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={data.chart} margin={{ top: 5, right: 30, left: 10, bottom: 20 }}>
+          <LineChart data={chartData} margin={{ top: 5, right: 30, left: 10, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
               dataKey="time"

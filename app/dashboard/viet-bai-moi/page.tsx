@@ -1,12 +1,15 @@
 'use client'
 
-import React, { useState, Suspense } from 'react'
+import React, { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 
 /* ─── Types ─── */
 type Device = 'desktop' | 'tablet' | 'mobile'
 type RightPanel = 'info' | 'author' | 'comment' | 'settings' | 'seo' | 'ai' | null
+
+interface ApiCategory { _id: string; name: string; slug: string }
+interface Toast { msg: string; type: 'ok' | 'err' }
 
 const articleTypeLabels: Record<string, string> = {
   'size-s': 'SIZE S', 'size-m': 'SIZE M', 'size-l': 'SIZE L',
@@ -14,29 +17,32 @@ const articleTypeLabels: Record<string, string> = {
   'livestream': 'Bài Livestream', 'wiki-how': 'Wiki-How', 'cooking': 'Nấu Ăn', 'qa': 'Giải Đáp Kiến Thức',
 }
 
-const categories = [
-  { id: 'thoi-su', label: 'Thời Sự', children: ['Đô thị', 'Đời sống', 'Giáo dục', 'Thời tiết'] },
-  { id: 'kinh-te', label: 'Kinh Tế', children: ['Kinh doanh', 'Tiêu dùng', 'Tài chính'] },
-  { id: 'xa-hoi', label: 'Xã Hội', children: ['Trong nước', 'Quốc tế', 'Giao thông'] },
-  { id: 'cong-nghe', label: 'Công Nghệ', children: ['Điện thoại', 'Máy tính', 'Internet'] },
-  { id: 'the-thao', label: 'Thể Thao', children: ['Bóng đá', 'Tennis', 'Thể thao khác'] },
-  { id: 'giai-tri', label: 'Giải Trí', children: ['Phim ảnh', 'Âm nhạc', 'Nghệ sĩ'] },
-  { id: 'suc-khoe', label: 'Sức Khỏe', children: ['Dinh dưỡng', 'Bệnh lý', 'Làm đẹp'] },
-]
+const urlTypeToModel: Record<string, string> = {
+  'size-s': 'size_s', 'size-m': 'size_m', 'size-l': 'size_l',
+  'big-story': 'big_story', 'auto-video': 'video_autoplay',
+  'wiki-how': 'wiki_how', 'magazine': 'magazine', 'livestream': 'livestream',
+}
+
+const categorySubs: Record<string, string[]> = {
+  'thoi-su':  ['Đô thị', 'Đời sống', 'Giáo dục', 'Thời tiết'],
+  'kinh-te':  ['Kinh doanh', 'Tiêu dùng', 'Tài chính'],
+  'xa-hoi':   ['Trong nước', 'Quốc tế', 'Giao thông'],
+  'cong-nghe':['Điện thoại', 'Máy tính', 'Internet'],
+  'the-thao': ['Bóng đá', 'Tennis', 'Thể thao khác'],
+  'giai-tri': ['Phim ảnh', 'Âm nhạc', 'Nghệ sĩ'],
+  'suc-khoe': ['Dinh dưỡng', 'Bệnh lý', 'Làm đẹp'],
+}
 
 const aiNewsItems = [
-  { source: 'Daily Mail', title: 'Apple announces major iPhone redesign for 2027', time: '2 phút trước', status: 'new' },
-  { source: 'BBC News', title: 'Global temperatures hit record highs in May 2026', time: '5 phút trước', status: 'new' },
-  { source: 'Reuters', title: 'Samsung reveals Galaxy Z Fold 9 with AI features', time: '12 phút trước', status: 'saved' },
-  { source: 'CNN', title: 'Tesla cybertruck faces recall over software issues', time: '20 phút trước', status: 'editing' },
-  { source: 'TechCrunch', title: 'OpenAI launches GPT-5 with multimodal capabilities', time: '35 phút trước', status: 'done' },
+  { source: 'Daily Mail', title: 'Apple announces major iPhone redesign for 2027', time: '2 phút trước' },
+  { source: 'BBC News', title: 'Global temperatures hit record highs in May 2026', time: '5 phút trước' },
+  { source: 'Reuters', title: 'Samsung reveals Galaxy Z Fold 9 with AI features', time: '12 phút trước' },
+  { source: 'CNN', title: 'Tesla cybertruck faces recall over software issues', time: '20 phút trước' },
+  { source: 'TechCrunch', title: 'OpenAI launches GPT-5 with multimodal capabilities', time: '35 phút trước' },
 ]
 
-/* ─── Word Counter ─── */
 const countWords = (text: string) => text.trim() === '' ? 0 : text.trim().split(/\s+/).length
 
-/* ═══════════════════════════════════════════════════════ */
-/*  EDITOR PAGE                                           */
 /* ═══════════════════════════════════════════════════════ */
 export default function VietBaiMoiPage() {
   return (
@@ -46,62 +52,197 @@ export default function VietBaiMoiPage() {
   )
 }
 
+/* ═══════════════════════════════════════════════════════ */
 function VietBaiMoiContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
-  const articleType = searchParams.get('type') || 'size-s'
+  const articleType = searchParams.get('type') || 'size-m'
+  const editId      = searchParams.get('id')            // null = viết mới, có giá trị = đang sửa
 
-  const [device, setDevice] = useState<Device>('desktop')
-  const [rightPanel, setRightPanel] = useState<RightPanel>(null)
-  const [title, setTitle] = useState('')
-  const [sapo, setSapo] = useState('')
-  const [content, setContent] = useState('')
-  const [expandedCats, setExpandedCats] = useState<string[]>(['thoi-su'])
-  const [checkedCats, setCheckedCats] = useState<string[]>([])
+  const [device,          setDevice]          = useState<Device>('desktop')
+  const [rightPanel,      setRightPanel]      = useState<RightPanel>(null)
+  const [title,           setTitle]           = useState('')
+  const [sapo,            setSapo]            = useState('')
+  const [content,         setContent]         = useState('')
+  const [expandedCats,    setExpandedCats]    = useState<string[]>(['thoi-su'])
+  const [selectedCatSlug, setSelectedCatSlug] = useState<string | null>(null)
+  const [apiCategories,   setApiCategories]   = useState<ApiCategory[]>([])
+  const [thumbnail,       setThumbnail]       = useState('')
+  const [uploadingImg,    setUploadingImg]    = useState(false)
+  const [saving,          setSaving]          = useState(false)
+  const [loadingEdit,     setLoadingEdit]     = useState(!!editId)
+  const [toast,           setToast]           = useState<Toast | null>(null)
   const [showPreviewAlert, setShowPreviewAlert] = useState(false)
 
-  /* Right panel toggle */
+  // Fetch danh sách chuyên mục từ API
+  useEffect(() => {
+    fetch('/api/categories')
+      .then(r => r.json())
+      .then(d => { if (d.ok) setApiCategories(d.data) })
+      .catch(() => {})
+  }, [])
+
+  // Nếu có ?id= trên URL → đây là chế độ SỬA BÀI → tải dữ liệu bài cũ về điền vào editor
+  useEffect(() => {
+    if (!editId) return
+    setLoadingEdit(true)
+    fetch(`/api/articles/${editId}`)
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) return
+        const a = d.data
+        setTitle(a.title ?? '')
+        setSapo(a.sapo ?? '')
+        setContent(a.content ?? '')
+        // categoryId đã được populate → có trường slug để map sang selectedCatSlug
+        if (a.categoryId?.slug) setSelectedCatSlug(a.categoryId.slug)
+        if (a.thumbnail)        setThumbnail(a.thumbnail)
+      })
+      .catch(() => {})
+      .finally(() => setLoadingEdit(false))
+  }, [editId])
+
+  const showToast = (msg: string, type: 'ok' | 'err') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const handleImageUpload = async (file: File) => {
+    setUploadingImg(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res  = await fetch('/api/media/upload', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!data.ok) { showToast(data.error || 'Lỗi khi tải ảnh lên', 'err'); return }
+      setThumbnail(data.data.url)
+      showToast('Đã tải ảnh lên thành công!', 'ok')
+    } catch {
+      showToast('Lỗi kết nối khi tải ảnh', 'err')
+    } finally {
+      setUploadingImg(false)
+    }
+  }
+
   const togglePanel = (panel: RightPanel) =>
     setRightPanel((prev) => (prev === panel ? null : panel))
 
-  /* Category expand/collapse */
-  const toggleCatExpand = (id: string) =>
-    setExpandedCats((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
+  const toggleCatExpand = (slug: string) =>
+    setExpandedCats((prev) => prev.includes(slug) ? prev.filter(x => x !== slug) : [...prev, slug])
 
-  /* Category checkbox */
-  const toggleCatCheck = (label: string) =>
-    setCheckedCats((prev) => prev.includes(label) ? prev.filter((x) => x !== label) : [...prev, label])
-
-  /* Preview validation */
   const handlePreview = () => {
     if (!title.trim()) { setShowPreviewAlert(true); return }
     alert('Đang xem trước bài viết: ' + title)
   }
 
+  const saveDraft = async (): Promise<string | null> => {
+    if (!title.trim()) {
+      showToast('Tiêu đề không được để trống', 'err')
+      return null
+    }
+    setSaving(true)
+    const catId = apiCategories.find(c => c.slug === selectedCatSlug)?._id ?? null
+    const body  = JSON.stringify({
+      title, sapo, content, thumbnail,
+      articleType: urlTypeToModel[articleType] ?? 'size_m',
+      categoryId: catId,
+      source: '',
+    })
+    try {
+      let res: Response
+      if (editId) {
+        // ── CHẾ ĐỘ SỬA: gọi PATCH để cập nhật bài đã có ──
+        res = await fetch(`/api/articles/${editId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        })
+      } else {
+        // ── CHẾ ĐỘ VIẾT MỚI: gọi POST để tạo bài mới ──
+        res = await fetch('/api/articles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        })
+      }
+      const data = await res.json()
+      if (!data.ok) { showToast(data.error || 'Lỗi khi lưu bài', 'err'); return null }
+      // PATCH trả về data.data (bài vừa cập nhật), POST cũng trả về data.data
+      return editId ?? String(data.data._id)
+    } catch {
+      showToast('Lỗi kết nối máy chủ', 'err')
+      return null
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    const id = await saveDraft()
+    if (id) {
+      showToast(editId ? 'Đã cập nhật bài viết!' : 'Đã lưu nháp thành công!', 'ok')
+      setTimeout(() => router.push('/dashboard/bai-viet'), 1200)
+    }
+  }
+
+  const handleSubmitReview = async () => {
+    const id = await saveDraft()
+    if (!id) return
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/articles/${id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: 'processing' }),
+      })
+      const data = await res.json()
+      if (!data.ok) { showToast(data.error || 'Lỗi khi gửi duyệt', 'err'); return }
+      showToast('Đã gửi bài để biên tập duyệt!', 'ok')
+      setTimeout(() => router.push('/dashboard/bai-viet'), 1200)
+    } catch {
+      showToast('Lỗi kết nối máy chủ', 'err')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const titleWords = countWords(title)
   const sapoWords = countWords(sapo)
 
+  // Khi đang tải bài cũ → hiện màn chờ, không render editor rỗng
+  if (loadingEdit) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-100 items-center justify-center gap-4">
+        <div className="w-8 h-8 border-4 border-[#17a2b8] border-t-transparent rounded-full animate-spin"/>
+        <p className="text-sm text-gray-500">Đang tải bài viết...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
-      {/* ─── TOP BAR ─── */}
+      {/* TOP BAR */}
       <EditorTopBar
-        articleType={articleTypeLabels[articleType] || 'SIZE S'}
+        articleType={articleTypeLabels[articleType] || 'SIZE M'}
+        isEditing={!!editId}
         device={device}
+        saving={saving}
         onDeviceChange={setDevice}
         onPreview={handlePreview}
+        onSaveDraft={handleSaveDraft}
+        onSubmitReview={handleSubmitReview}
       />
 
-      {/* ─── MAIN AREA ─── */}
+      {/* MAIN AREA */}
       <div className="flex flex-1 overflow-hidden">
-        {/* LEFT PANEL */}
         <LeftPanel
-          categories={categories}
+          apiCategories={apiCategories}
           expandedCats={expandedCats}
-          checkedCats={checkedCats}
+          selectedCatSlug={selectedCatSlug}
           onToggleExpand={toggleCatExpand}
-          onToggleCheck={toggleCatCheck}
+          onSelectCat={setSelectedCatSlug}
         />
 
-        {/* CENTER EDITOR */}
         <CenterEditor
           device={device}
           title={title}
@@ -114,12 +255,17 @@ function VietBaiMoiContent() {
           onContentChange={setContent}
         />
 
-        {/* RIGHT PANEL ICONS */}
         <RightPanelIcons activePanel={rightPanel} onToggle={togglePanel} />
 
-        {/* RIGHT PANEL CONTENT */}
         {rightPanel && (
-          <RightPanelContent panel={rightPanel} onClose={() => setRightPanel(null)} />
+          <RightPanelContent
+            panel={rightPanel}
+            thumbnail={thumbnail}
+            uploadingImg={uploadingImg}
+            onImageUpload={handleImageUpload}
+            onClearThumbnail={() => setThumbnail('')}
+            onClose={() => setRightPanel(null)}
+          />
         )}
       </div>
 
@@ -147,6 +293,19 @@ function VietBaiMoiContent() {
           </div>
         </div>
       )}
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[300] flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl text-white text-sm font-medium transition-all ${
+          toast.type === 'ok' ? 'bg-emerald-500' : 'bg-red-500'
+        }`}>
+          {toast.type === 'ok'
+            ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          }
+          {toast.msg}
+        </div>
+      )}
     </div>
   )
 }
@@ -155,27 +314,37 @@ function VietBaiMoiContent() {
 /*  EDITOR TOP BAR                                        */
 /* ═══════════════════════════════════════════════════════ */
 function EditorTopBar({
-  articleType, device, onDeviceChange, onPreview,
+  articleType, isEditing, device, saving, onDeviceChange, onPreview, onSaveDraft, onSubmitReview,
 }: {
   articleType: string
+  isEditing: boolean
   device: Device
+  saving: boolean
   onDeviceChange: (d: Device) => void
   onPreview: () => void
+  onSaveDraft: () => void
+  onSubmitReview: () => void
 }) {
   return (
     <header className="h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-3 shadow-sm flex-shrink-0 z-30">
       {/* Back + Logo */}
-      <Link href="/dashboard" className="flex items-center gap-2 mr-4 hover:opacity-80 transition-opacity">
+      <Link href="/dashboard/bai-viet" className="flex items-center gap-2 mr-4 hover:opacity-80 transition-opacity">
         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
         <TopbarLogoSmall />
       </Link>
 
-      {/* Article type badge */}
-      <span className="text-xs font-bold text-[#17a2b8] border border-[#17a2b8] rounded px-2 py-0.5">
-        {articleType}
-      </span>
+      {/* Badge: SỬA BÀI hoặc loại bài */}
+      {isEditing ? (
+        <span className="text-xs font-bold text-amber-600 border border-amber-400 bg-amber-50 rounded px-2 py-0.5">
+          SỬA BÀI
+        </span>
+      ) : (
+        <span className="text-xs font-bold text-[#17a2b8] border border-[#17a2b8] rounded px-2 py-0.5">
+          {articleType}
+        </span>
+      )}
 
       {/* Insert toolbar */}
       <div className="flex items-center gap-1 ml-2 border-l border-gray-200 pl-3">
@@ -213,16 +382,31 @@ function EditorTopBar({
       </div>
 
       {/* Action buttons */}
-      <button className="px-4 h-8 text-xs font-semibold border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
-        Lưu nháp
+      <button
+        onClick={onSaveDraft}
+        disabled={saving}
+        className="px-4 h-8 text-xs font-semibold border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {saving ? 'Đang lưu...' : 'Lưu nháp'}
       </button>
       <button
         onClick={onPreview}
-        className="px-4 h-8 text-xs font-semibold bg-[#17a2b8] text-white rounded-lg hover:bg-[#138496] transition-colors"
+        disabled={saving}
+        className="px-4 h-8 text-xs font-semibold bg-[#17a2b8] text-white rounded-lg hover:bg-[#138496] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         XEM TRƯỚC
       </button>
-      <button className="px-4 h-8 text-xs font-semibold bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+      <button
+        onClick={onSubmitReview}
+        disabled={saving}
+        className="px-4 h-8 text-xs font-semibold bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+      >
+        {saving && (
+          <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        )}
         GỬI DUYỆT
       </button>
     </header>
@@ -232,16 +416,29 @@ function EditorTopBar({
 /* ═══════════════════════════════════════════════════════ */
 /*  LEFT PANEL — CATEGORIES                               */
 /* ═══════════════════════════════════════════════════════ */
-function LeftPanel({ categories, expandedCats, checkedCats, onToggleExpand, onToggleCheck }: {
-  categories: typeof import('./page').default extends never ? never : any[]
+function LeftPanel({
+  apiCategories, expandedCats, selectedCatSlug, onToggleExpand, onSelectCat,
+}: {
+  apiCategories: ApiCategory[]
   expandedCats: string[]
-  checkedCats: string[]
-  onToggleExpand: (id: string) => void
-  onToggleCheck: (label: string) => void
+  selectedCatSlug: string | null
+  onToggleExpand: (slug: string) => void
+  onSelectCat: (slug: string | null) => void
 }) {
+  const displayCats = apiCategories.length > 0
+    ? apiCategories
+    : [
+        { _id: '', slug: 'thoi-su',   name: 'Thời Sự' },
+        { _id: '', slug: 'kinh-te',   name: 'Kinh Tế' },
+        { _id: '', slug: 'xa-hoi',    name: 'Xã Hội' },
+        { _id: '', slug: 'cong-nghe', name: 'Công Nghệ' },
+        { _id: '', slug: 'the-thao',  name: 'Thể Thao' },
+        { _id: '', slug: 'giai-tri',  name: 'Giải Trí' },
+        { _id: '', slug: 'suc-khoe',  name: 'Sức Khỏe' },
+      ]
+
   return (
     <aside className="w-56 bg-white border-r border-gray-200 flex flex-col overflow-hidden flex-shrink-0">
-      {/* Categories section */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-3 py-2.5 border-b border-gray-100 bg-gray-50">
           <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wide">
@@ -249,40 +446,70 @@ function LeftPanel({ categories, expandedCats, checkedCats, onToggleExpand, onTo
           </span>
         </div>
         <div className="py-1">
-          {categories.map((cat: any) => (
-            <div key={cat.id}>
-              <button
-                onClick={() => onToggleExpand(cat.id)}
-                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition-colors group"
-              >
-                <svg
-                  className={`w-3 h-3 text-gray-400 transition-transform flex-shrink-0 ${
-                    expandedCats.includes(cat.id) ? 'rotate-90' : ''
-                  }`}
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                <span className="text-xs font-semibold text-gray-700 flex-1 text-left">{cat.label}</span>
-              </button>
-              {expandedCats.includes(cat.id) && (
-                <div className="ml-5 border-l border-gray-100">
-                  {cat.children.map((child: string) => (
-                    <label key={child} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={checkedCats.includes(child)}
-                        onChange={() => onToggleCheck(child)}
-                        className="w-3.5 h-3.5 rounded accent-[#17a2b8] cursor-pointer"
-                      />
-                      <span className="text-xs text-gray-600">{child}</span>
-                    </label>
-                  ))}
+          {displayCats.map((cat) => {
+            const isExpanded = expandedCats.includes(cat.slug)
+            const isSelected = selectedCatSlug === cat.slug
+            const subs = categorySubs[cat.slug] ?? []
+            return (
+              <div key={cat.slug}>
+                <div className={`flex items-center px-3 py-2 transition-colors group ${isSelected ? 'bg-[#17a2b8]/10' : 'hover:bg-gray-50'}`}>
+                  {/* Expand arrow */}
+                  <button
+                    onClick={() => onToggleExpand(cat.slug)}
+                    className="mr-1.5 flex-shrink-0"
+                  >
+                    <svg
+                      className={`w-3 h-3 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+
+                  {/* Category name — clicking selects it */}
+                  <button
+                    onClick={() => onSelectCat(isSelected ? null : cat.slug)}
+                    className={`flex-1 text-left text-xs font-semibold transition-colors ${
+                      isSelected ? 'text-[#17a2b8]' : 'text-gray-700 group-hover:text-gray-900'
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+
+                  {isSelected && (
+                    <svg className="w-3 h-3 text-[#17a2b8] flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+
+                {isExpanded && subs.length > 0 && (
+                  <div className="ml-5 border-l border-gray-100">
+                    {subs.map((sub) => (
+                      <button
+                        key={sub}
+                        onClick={() => onSelectCat(cat.slug)}
+                        className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                          isSelected ? 'text-[#17a2b8]' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
+
+        {selectedCatSlug && (
+          <div className="px-3 pb-3">
+            <div className="text-[10px] text-[#17a2b8] bg-[#17a2b8]/10 rounded-lg px-2 py-1.5 text-center font-medium">
+              Đã chọn: {displayCats.find(c => c.slug === selectedCatSlug)?.name}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Related articles section */}
@@ -360,7 +587,6 @@ function CenterEditor({ device, title, sapo, content, titleWords, sapoWords, onT
 
         {/* Content + Insert Toolbar */}
         <div className="px-8 py-4 min-h-[60vh] relative">
-          {/* Insert toolbar */}
           <div className="flex items-center gap-1 mb-4 p-2 bg-gray-50 border border-gray-200 rounded-lg flex-wrap">
             {[
               { icon: <ImgIcon />, label: 'Ảnh' },
@@ -434,7 +660,15 @@ function RightPanelIcons({ activePanel, onToggle }: {
 /* ═══════════════════════════════════════════════════════ */
 /*  RIGHT PANEL CONTENT                                   */
 /* ═══════════════════════════════════════════════════════ */
-function RightPanelContent({ panel, onClose }: { panel: RightPanel; onClose: () => void }) {
+function RightPanelContent({ panel, thumbnail, uploadingImg, onImageUpload, onClearThumbnail, onClose }: {
+  panel: RightPanel
+  thumbnail: string
+  uploadingImg: boolean
+  onImageUpload: (file: File) => void
+  onClearThumbnail: () => void
+  onClose: () => void
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [seoTab, setSeoTab] = useState<'seo' | 'content' | 'heading'>('seo')
   const [aiTab, setAiTab] = useState('all')
   const [keyword, setKeyword] = useState('')
@@ -453,7 +687,6 @@ function RightPanelContent({ panel, onClose }: { panel: RightPanel; onClose: () 
 
   return (
     <div className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0 overflow-hidden">
-      {/* Panel header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
         <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">
           {panel && titles[panel]}
@@ -465,22 +698,71 @@ function RightPanelContent({ panel, onClose }: { panel: RightPanel; onClose: () 
         </button>
       </div>
 
-      {/* Panel content */}
       <div className="flex-1 overflow-y-auto">
         {panel === 'info' && (
           <div className="p-4 space-y-4">
             <div>
               <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-2">Ảnh Đại Diện</label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#17a2b8] transition-colors cursor-pointer group">
-                <svg className="w-8 h-8 mx-auto text-gray-300 group-hover:text-[#17a2b8] mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <p className="text-xs text-gray-400">Click để tải ảnh lên</p>
-              </div>
-              <div className="flex gap-2 mt-2">
-                <button className="flex-1 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">Ảnh tĩnh</button>
-                <button className="flex-1 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">Ảnh GIF</button>
-              </div>
+
+              {/* Input file ẩn — click vào vùng ảnh sẽ mở dialog chọn file */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0]
+                  if (file) onImageUpload(file)
+                  e.target.value = ''
+                }}
+              />
+
+              {thumbnail ? (
+                /* ── Đã có ảnh: hiện preview + nút đổi / xóa ── */
+                <div className="relative group">
+                  <img
+                    src={thumbnail}
+                    alt="Thumbnail"
+                    className="w-full h-40 object-cover rounded-lg border border-gray-200"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-white text-gray-800 text-xs font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      Đổi ảnh
+                    </button>
+                    <button
+                      onClick={onClearThumbnail}
+                      className="px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ── Chưa có ảnh: vùng click để upload ── */
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImg}
+                  className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#17a2b8] transition-colors group disabled:opacity-50"
+                >
+                  {uploadingImg ? (
+                    <>
+                      <div className="w-6 h-6 border-2 border-[#17a2b8] border-t-transparent rounded-full animate-spin mx-auto mb-2"/>
+                      <p className="text-xs text-[#17a2b8]">Đang tải lên...</p>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-8 h-8 mx-auto text-gray-300 group-hover:text-[#17a2b8] mb-2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-xs text-gray-400 group-hover:text-[#17a2b8] transition-colors">Click để tải ảnh lên</p>
+                      <p className="text-[10px] text-gray-300 mt-1">JPG, PNG, GIF, WebP</p>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
             <div>
               <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Chú Thích Ảnh</label>
@@ -546,7 +828,7 @@ function RightPanelContent({ panel, onClose }: { panel: RightPanel; onClose: () 
               <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:border-[#17a2b8]">
                 <div className="flex gap-1 p-1.5 border-b border-gray-200 bg-gray-50">
                   {['B', 'I', 'U'].map((fmt) => (
-                    <button key={fmt} className={`w-6 h-6 text-xs font-${fmt === 'B' ? 'bold' : fmt === 'I' ? 'normal italic' : 'normal'} text-gray-600 hover:bg-white rounded border border-transparent hover:border-gray-200`}>{fmt}</button>
+                    <button key={fmt} className="w-6 h-6 text-xs text-gray-600 hover:bg-white rounded border border-transparent hover:border-gray-200">{fmt}</button>
                   ))}
                 </div>
                 <textarea className="w-full px-3 py-2 text-xs focus:outline-none resize-none min-h-[80px]" placeholder="Nhập nội dung bình luận nội bộ..." />
@@ -560,7 +842,6 @@ function RightPanelContent({ panel, onClose }: { panel: RightPanel; onClose: () 
 
         {panel === 'settings' && (
           <div className="flex flex-col h-full">
-            {/* SEO Score */}
             <div className="p-4 border-b border-gray-100 flex items-center gap-3">
               <div className="relative w-14 h-14 flex-shrink-0">
                 <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
@@ -577,7 +858,6 @@ function RightPanelContent({ panel, onClose }: { panel: RightPanel; onClose: () 
                 <p className="text-[11px] text-red-500 font-medium">⚠️ Cần cải thiện</p>
               </div>
             </div>
-            {/* Tabs */}
             <div className="flex border-b border-gray-200">
               {(['seo', 'content', 'heading'] as const).map((tab) => (
                 <button key={tab} onClick={() => setSeoTab(tab)} className={`flex-1 py-2 text-[11px] font-semibold transition-colors ${seoTab === tab ? 'text-[#17a2b8] border-b-2 border-[#17a2b8]' : 'text-gray-400 hover:text-gray-600'}`}>
@@ -628,7 +908,6 @@ function RightPanelContent({ panel, onClose }: { panel: RightPanel; onClose: () 
 
         {panel === 'ai' && (
           <div className="flex flex-col h-full">
-            {/* AI Tabs */}
             <div className="overflow-x-auto border-b border-gray-200 flex-shrink-0">
               <div className="flex min-w-max">
                 {[

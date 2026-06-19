@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { IMSSidebar } from '@/components/IMS/IMSSidebar'
 import { IMSTopBar } from '@/components/IMS/IMSTopBar'
 
@@ -9,8 +10,9 @@ import { IMSTopBar } from '@/components/IMS/IMSTopBar'
 ══════════════════════════════════════════════════════════ */
 const MENUS = [
   { id: 'log-action',      label: 'Log Action' },
+  { id: 'nguoi-dung',      label: 'Quản lý người dùng' },
   { id: 'phong-ban',       label: 'Quản lý phòng ban' },
-  { id: 'menu-chuyen-muc', label: 'Menu chuyên mục' },
+  { id: 'menu-chuyen-muc', label: 'Quản lý chuyên mục' },
   { id: 'dong-su-kien',    label: 'Quản lý dòng sự kiện' },
   { id: 'tro-ly-tin',      label: 'Quản lý người dùng trợ lý tin' },
   { id: 'profile-tac-gia', label: 'Quản lý profile tác giả' },
@@ -25,14 +27,6 @@ const MENUS = [
 /* ═══════════════════════════════════════════════════════════
    DỮ LIỆU MẪU
 ══════════════════════════════════════════════════════════ */
-const D_PHONG_BAN = [
-  { id:1, name:'Hà Nội',    desc:'Văn phòng tổng biên tập',     members:45 },
-  { id:2, name:'TPHCM',     desc:'Văn phòng phía Nam',          members:32 },
-  { id:3, name:'Nha Trang', desc:'Văn phòng miền Trung Nam',    members:12 },
-  { id:4, name:'Đà Nẵng',   desc:'Văn phòng miền Trung',       members:18 },
-  { id:5, name:'Cần Thơ',   desc:'Văn phòng đồng bằng SCL',    members:10 },
-]
-
 const D_DONG_SU_KIEN = [
   { id:1, img:'🌍', name:'Chiến tranh và hợp tác quân sự Mỹ - Ukraine',   cat:'Thế giới',  count:142, showHome:true,  featured:false },
   { id:2, img:'☕', name:'Giá cà phê tăng cao toàn cầu',                 cat:'Kinh tế',   count:38,  showHome:true,  featured:true  },
@@ -51,14 +45,6 @@ const D_TRO_LY_TIN = [
   { id:3, avatar:'📊', name:'Trợ lý phân tích dữ liệu',users:5,  desc:'Phân tích xu hướng và số liệu thị trường' },
   { id:4, avatar:'✍️', name:'Trợ lý viết bài dài',    users:12, desc:'Hỗ trợ viết bài phân tích chuyên sâu' },
   { id:5, avatar:'🌐', name:'Trợ lý dịch thuật',      users:6,  desc:'Dịch tin tức quốc tế sang tiếng Việt' },
-]
-
-const D_TAC_GIA = [
-  { id:1, name:'Minh Vũ',        desc:'Phóng viên thời sự, 8 năm kinh nghiệm',   articles:342 },
-  { id:2, name:'Thanh Hà',       desc:'Biên tập viên kinh tế',                   articles:215 },
-  { id:3, name:'Hoàng Anh',      desc:'Phóng viên thể thao',                     articles:488 },
-  { id:4, name:'Kim Phụng',      desc:'Biên tập viên văn hóa - xã hội',         articles:176 },
-  { id:5, name:'Trần Đức Lương', desc:'Phóng viên công nghệ và đổi mới sáng tạo',articles:134 },
 ]
 
 const D_CHU_DE = [
@@ -81,16 +67,6 @@ const D_BRAND = [
   { id:3, name:'TechCom Bank',                  url:'techcombank.com.vn',icon:'💳', logo:'TCB' },
 ]
 
-const D_LOG = [
-  { id:1, user:'minhvu',       action:'xuất bản bài viết', target:'Dự báo thời tiết ngày 24/5/2026',       rel:'19 giờ trước',  abs:'24/05/2026 06:00', type:'publish' },
-  { id:2, user:'dinhluong_vcc',action:'sửa bài viết',      target:'Hà Nội sẽ có thêm 2 tuyến metro',       rel:'1 ngày trước',  abs:'23/05/2026 14:20', type:'edit'    },
-  { id:3, user:'NGOCLM_VCC',   action:'xóa bài viết',      target:'[Nháp] Bài chưa hoàn thành tháng 4',    rel:'1 ngày trước',  abs:'23/05/2026 09:45', type:'delete'  },
-  { id:4, user:'hoattv_vcc',   action:'nhận biên tập',     target:'Công nghệ AI thay đổi ngành báo chí',   rel:'2 ngày trước',  abs:'22/05/2026 16:30', type:'edit'    },
-  { id:5, user:'minhquang914', action:'duyệt bài viết',    target:'Quốc hội thông qua Nghị quyết 2026',    rel:'2 ngày trước',  abs:'22/05/2026 10:15', type:'publish' },
-  { id:6, user:'muaxuan',      action:'xuất bản bài viết', target:'VinFast ra mắt mẫu xe VF 3 Plus',       rel:'3 ngày trước',  abs:'21/05/2026 08:00', type:'publish' },
-  { id:7, user:'trangnv_vcc',  action:'trả lại bài viết',  target:'Phân tích kinh tế quý II',              rel:'3 ngày trước',  abs:'21/05/2026 11:20', type:'return'  },
-  { id:8, user:'dinhluong_vcc',action:'sửa bài viết',      target:'TP.HCM ra mắt ứng dụng tra cứu ngập',  rel:'4 ngày trước',  abs:'20/05/2026 15:40', type:'edit'    },
-]
 
 const D_SO_BAO = [
   { id:1, title:'Tạp chí Doanh nghiệp và Tiếp thị số 116', num:'116', date:'01/05/2026', edited:'15/05/2026', status:'Hiển thị' },
@@ -111,23 +87,47 @@ const D_MAGAZINE = [
    PAGE CHÍNH
 ══════════════════════════════════════════════════════════ */
 export default function QuanLyPage() {
-  const [active,   setActive]   = useState('log-action')
-  const [loading,  setLoading]  = useState(false)
-  const [editItem, setEditItem] = useState<any>(null)
-  const [search,   setSearch]   = useState('')
+  const router = useRouter()
+  const [active,        setActive]        = useState('log-action')
+  const [sectionLoading,setSectionLoading]= useState(false)
+  const [editItem,      setEditItem]      = useState<any>(null)
+  const [search,        setSearch]        = useState('')
+  const [checkingRole,  setCheckingRole]  = useState(true)
+  const [toast,         setToast]         = useState<{msg:string; type:'ok'|'err'}|null>(null)
 
-  /* Simulate data loading when switching sections */
+  const showToast = useCallback((msg: string, type: 'ok'|'err' = 'ok') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3200)
+  }, [])
+
   const switchMenu = useCallback((id: string) => {
     if (id === active) return
-    setLoading(true)
+    setSectionLoading(true)
     setSearch('')
-    setTimeout(() => {
-      setActive(id)
-      setLoading(false)
-    }, 700)
+    setTimeout(() => { setActive(id); setSectionLoading(false) }, 300)
   }, [active])
 
-  const activeMenu = MENUS.find(m => m.id === active)
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok || d.user?.role !== 'admin') router.replace('/dashboard')
+        else setCheckingRole(false)
+      })
+      .catch(() => router.replace('/dashboard'))
+  }, [router])
+
+  if (checkingRole) return (
+    <div className="flex min-h-screen items-center justify-center bg-[#f0f2f5]">
+      <div className="flex items-center gap-2.5 bg-white border border-gray-200 rounded-full px-5 py-2.5 shadow text-sm text-gray-600">
+        <svg className="w-4 h-4 animate-spin text-[#17a2b8]" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        Đang kiểm tra quyền...
+      </div>
+    </div>
+  )
 
   return (
     <div className="flex min-h-screen bg-[#f0f2f5]">
@@ -156,28 +156,27 @@ export default function QuanLyPage() {
 
           {/* ── Vùng nội dung ── */}
           <div className="flex-1 overflow-y-auto p-5 relative">
-
-            {/* Loading pill */}
-            {loading && (
+            {sectionLoading && (
               <div className="absolute inset-0 flex items-center justify-center z-20 bg-[#f0f2f5]/60">
                 <div className="flex items-center gap-2.5 bg-white border border-gray-200 rounded-full px-5 py-2.5 shadow-lg text-sm text-gray-600">
                   <svg className="w-4 h-4 animate-spin text-[#17a2b8]" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
-                  Đang tải thông tin...
+                  Đang tải...
                 </div>
               </div>
             )}
 
-            {!loading && (
+            {!sectionLoading && (
               <div>
                 {active === 'log-action'      && <SectionLogAction search={search} setSearch={setSearch}/>}
-                {active === 'phong-ban'       && <SectionPhongBan  search={search} setSearch={setSearch} onEdit={setEditItem}/>}
-                {active === 'menu-chuyen-muc' && <SectionMenuChuyenMuc/>}
+                {active === 'nguoi-dung'      && <SectionNguoiDung showToast={showToast}/>}
+                {active === 'phong-ban'       && <SectionPhongBan  showToast={showToast}/>}
+                {active === 'menu-chuyen-muc' && <SectionMenuChuyenMuc showToast={showToast}/>}
                 {active === 'dong-su-kien'    && <SectionDongSuKien search={search} setSearch={setSearch}/>}
                 {active === 'tro-ly-tin'      && <SectionTroLyTin  search={search} setSearch={setSearch}/>}
-                {active === 'profile-tac-gia' && <SectionTacGia    search={search} setSearch={setSearch} onEdit={setEditItem}/>}
+                {active === 'profile-tac-gia' && <SectionTacGia    showToast={showToast}/>}
                 {active === 'chu-de'          && <SectionChuDe     search={search} setSearch={setSearch} onEdit={setEditItem}/>}
                 {active === 'chuyen-gia'      && <SectionChuyenGia search={search} setSearch={setSearch} onEdit={setEditItem}/>}
                 {active === 'brand-content'   && <SectionBrandContent search={search} setSearch={setSearch} onEdit={setEditItem}/>}
@@ -190,8 +189,20 @@ export default function QuanLyPage() {
         </main>
       </div>
 
-      {/* Edit modal */}
+      {/* Edit modal (dùng cho phong-ban, tac-gia, v.v.) */}
       {editItem && <EditModal item={editItem} section={active} onClose={() => setEditItem(null)}/>}
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[300] flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl text-white text-sm font-medium
+          ${toast.type === 'ok' ? 'bg-emerald-500' : 'bg-red-500'}`}>
+          {toast.type === 'ok'
+            ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+            : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          }
+          {toast.msg}
+        </div>
+      )}
     </div>
   )
 }
@@ -317,11 +328,6 @@ function CBDisplay({ checked }: { checked: boolean }) {
   )
 }
 
-/* Log action color */
-function actionColor(type: string) {
-  const m: Record<string, string> = { publish: 'text-green-600 bg-green-50', edit: 'text-blue-600 bg-blue-50', delete: 'text-red-600 bg-red-50', return: 'text-orange-600 bg-orange-50' }
-  return m[type] || 'text-gray-600 bg-gray-50'
-}
 
 /* ═══════════════════════════════════════════════════════════
    EDIT MODAL
@@ -446,59 +452,91 @@ function EditModal({ item, section, onClose }: { item: any; section: string; onC
 }
 
 /* ═══════════════════════════════════════════════════════════
-   1. LOG ACTION (DEFAULT)
+   1. LOG ACTION
 ══════════════════════════════════════════════════════════ */
 function SectionLogAction({ search, setSearch }: any) {
-  const [objFilter,  setObjFilter]  = useState('')
-  const [actFilter,  setActFilter]  = useState('')
-  const [dateFrom,   setDateFrom]   = useState('')
-  const [dateTo,     setDateTo]     = useState('')
+  const [logs,      setLogs]      = useState<any[]>([])
+  const [fetching,  setFetching]  = useState(true)
+  const [objFilter, setObjFilter] = useState('')
+  const [actFilter, setActFilter] = useState('')
+  const [dateFrom,  setDateFrom]  = useState('')
+  const [dateTo,    setDateTo]    = useState('')
 
-  const filtered = D_LOG.filter(l =>
-    (!search || l.target.toLowerCase().includes(search.toLowerCase()) || l.user.includes(search)) &&
-    (!actFilter || l.type === actFilter)
+  const load = useCallback(() => {
+    setFetching(true)
+    const p = new URLSearchParams({ limit: '50' })
+    if (objFilter) p.set('objectType', objFilter)
+    fetch(`/api/logs?${p}`)
+      .then(r => r.json())
+      .then(d => { if (d.ok) setLogs(d.data) })
+      .catch(() => {})
+      .finally(() => setFetching(false))
+  }, [objFilter])
+
+  useEffect(() => { load() }, [load])
+
+  const filtered = logs.filter((l: any) =>
+    (!search || l.objectTitle?.toLowerCase().includes(search.toLowerCase())) &&
+    (!actFilter || l.actionType === actFilter)
   )
+
+  const ACTION_LABEL: Record<string, string> = {
+    create: 'tạo mới', update: 'cập nhật', delete: 'xóa',
+    publish: 'xuất bản', unpublish: 'gỡ xuống', return: 'trả lại',
+    submit_edit: 'gửi biên tập', submit_publish: 'gửi xuất bản',
+    approve: 'duyệt', remove: 'loại bỏ', restore: 'khôi phục',
+  }
+  const ACTION_COLOR: Record<string, string> = {
+    publish: 'text-green-600 bg-green-50', create: 'text-blue-600 bg-blue-50',
+    delete: 'text-red-600 bg-red-50', return: 'text-orange-600 bg-orange-50',
+    update: 'text-indigo-600 bg-indigo-50', remove: 'text-red-600 bg-red-50',
+    unpublish: 'text-gray-600 bg-gray-100',
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-base font-bold text-gray-800">Log Action</h1>
+        <button onClick={load} className="text-xs text-[#17a2b8] hover:underline">↻ Làm mới</button>
       </div>
-      {/* Filters */}
+
       <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 grid grid-cols-4 gap-3">
         <div>
-          <label className="block text-[10px] font-semibold text-gray-500 mb-1 uppercase">Đối tượng log</label>
-          <select value={objFilter} onChange={e=>setObjFilter(e.target.value)}
+          <label className="block text-[10px] font-semibold text-gray-500 mb-1 uppercase">Đối tượng</label>
+          <select value={objFilter} onChange={e => setObjFilter(e.target.value)}
             className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-[#17a2b8] bg-white">
             <option value="">Tất cả</option>
-            <option>Bài viết</option><option>Podcast</option><option>Người dùng</option>
+            <option value="article">Bài viết</option>
+            <option value="user">Người dùng</option>
+            <option value="category">Chuyên mục</option>
           </select>
         </div>
         <div>
-          <label className="block text-[10px] font-semibold text-gray-500 mb-1 uppercase">Loại hành động</label>
-          <select value={actFilter} onChange={e=>setActFilter(e.target.value)}
+          <label className="block text-[10px] font-semibold text-gray-500 mb-1 uppercase">Hành động</label>
+          <select value={actFilter} onChange={e => setActFilter(e.target.value)}
             className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-[#17a2b8] bg-white">
             <option value="">Tất cả</option>
             <option value="publish">Xuất bản</option>
-            <option value="edit">Sửa bài</option>
-            <option value="delete">Xóa bài</option>
+            <option value="create">Tạo mới</option>
+            <option value="update">Cập nhật</option>
+            <option value="delete">Xóa</option>
             <option value="return">Trả lại</option>
           </select>
         </div>
         <div>
           <label className="block text-[10px] font-semibold text-gray-500 mb-1 uppercase">Từ ngày</label>
-          <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
             className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-[#17a2b8]"/>
         </div>
         <div>
           <label className="block text-[10px] font-semibold text-gray-500 mb-1 uppercase">Tới ngày</label>
-          <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
             className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-[#17a2b8]"/>
         </div>
         <div className="col-span-3">
           <label className="block text-[10px] font-semibold text-gray-500 mb-1 uppercase">Tìm kiếm</label>
           <div className="relative">
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm theo tên bài viết, user..."
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tiêu đề bài viết..."
               className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-[#17a2b8]"/>
             <svg className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -506,31 +544,45 @@ function SectionLogAction({ search, setSearch }: any) {
           </div>
         </div>
         <div className="flex items-end">
-          <button className="w-full py-1.5 bg-[#17a2b8] text-white text-xs font-bold rounded hover:bg-[#138496] transition-colors">Lọc</button>
+          <button onClick={load} className="w-full py-1.5 bg-[#17a2b8] text-white text-xs font-bold rounded hover:bg-[#138496] transition-colors">Lọc</button>
         </div>
       </div>
 
-      <DataTable headers={['User', 'Hành động', 'Đối tượng', 'Thời gian', 'Cụ thể']}>
-        {filtered.map(l => (
-          <tr key={l.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-            <td className="px-4 py-3">
-              <div className="flex items-center gap-2">
-                <Av label={l.user} color="bg-slate-500"/>
-                <span className="font-medium text-gray-700">{l.user}</span>
-              </div>
-            </td>
-            <td className="px-4 py-3">
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${actionColor(l.type)}`}>{l.action}</span>
-            </td>
-            <td className="px-4 py-3 max-w-xs">
-              <p className="text-gray-700 line-clamp-1">{l.target}</p>
-            </td>
-            <td className="px-4 py-3 whitespace-nowrap text-gray-400">{l.rel}</td>
-            <td className="px-4 py-3 whitespace-nowrap text-gray-400 font-mono">{l.abs}</td>
-          </tr>
-        ))}
-      </DataTable>
-      <PagLabel from={1} to={filtered.length} total={D_LOG.length}/>
+      {fetching ? (
+        <div className="bg-white rounded border border-gray-200 p-10 text-center text-gray-400 text-sm">Đang tải logs...</div>
+      ) : filtered.length === 0 ? (
+        <div className="bg-white rounded border border-gray-200 p-10 text-center text-gray-400 text-sm">Không có dữ liệu</div>
+      ) : (
+        <DataTable headers={['Người dùng', 'Hành động', 'Loại', 'Đối tượng', 'Thời gian']}>
+          {filtered.map((l: any) => (
+            <tr key={l._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Av label={l.userId?.username || '?'} color="bg-slate-500"/>
+                  <span className="font-medium text-gray-700 font-mono text-xs">
+                    {l.userId?.username || String(l.userId).slice(-8)}
+                  </span>
+                </div>
+              </td>
+              <td className="px-4 py-3">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ACTION_COLOR[l.actionType] || 'text-gray-600 bg-gray-50'}`}>
+                  {ACTION_LABEL[l.actionType] || l.actionType}
+                </span>
+              </td>
+              <td className="px-4 py-3">
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]">{l.objectType}</span>
+              </td>
+              <td className="px-4 py-3 max-w-xs">
+                <p className="text-gray-700 line-clamp-1">{l.objectTitle || '—'}</p>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap text-gray-400 text-xs">
+                {new Date(l.createdAt).toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+      )}
+      <PagLabel from={1} to={filtered.length} total={logs.length}/>
     </div>
   )
 }
@@ -538,109 +590,168 @@ function SectionLogAction({ search, setSearch }: any) {
 /* ═══════════════════════════════════════════════════════════
    2. QUẢN LÝ PHÒNG BAN
 ══════════════════════════════════════════════════════════ */
-function SectionPhongBan({ search, setSearch, onEdit }: any) {
-  const filtered = D_PHONG_BAN.filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()))
+function SectionPhongBan({ showToast }: { showToast: (m: string, t: 'ok'|'err') => void }) {
+  const [depts,    setDepts]    = useState<any[]>([])
+  const [fetching, setFetching] = useState(true)
+  const [search,   setSearch]   = useState('')
+  const [modal,    setModal]    = useState<'add'|'edit'|null>(null)
+  const [target,   setTarget]   = useState<any>(null)
+  const [confirm,  setConfirm]  = useState<any>(null)
+
+  const load = useCallback(() => {
+    setFetching(true)
+    fetch('/api/departments')
+      .then(r => r.json())
+      .then(d => { if (d.ok) setDepts(d.data) })
+      .catch(() => {})
+      .finally(() => setFetching(false))
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const handleDelete = async (dept: any) => {
+    const res = await fetch(`/api/departments/${dept._id}`, { method: 'DELETE' })
+    const d   = await res.json()
+    if (d.ok) { showToast('Đã xóa phòng ban', 'ok'); load() }
+    else showToast(d.error || 'Lỗi', 'err')
+    setConfirm(null)
+  }
+
+  const filtered = depts.filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase()))
+
   return (
     <div>
-      <Toolbar addLabel="Thêm phòng ban mới" search={search} setSearch={setSearch}/>
-      <DataTable headers={['Avatar', 'Tên phòng ban', 'Mô tả', 'Nhân viên', 'Thao tác']}>
-        {filtered.map(p => (
-          <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-            <td className="px-4 py-3"><Av label={p.name} color="bg-gradient-to-br from-[#17c3d8] to-[#0e7c8a]"/></td>
-            <td className="px-4 py-3 font-semibold text-gray-800">{p.name}</td>
-            <td className="px-4 py-3 text-gray-500">{p.desc}</td>
-            <td className="px-4 py-3 text-center font-mono text-gray-600">{p.members}</td>
-            <td className="px-4 py-3 text-center">
-              <ThreeDot onEdit={() => onEdit(p)} onDelete={() => alert(`Xóa phòng ban: ${p.name}?`)}/>
-            </td>
-          </tr>
-        ))}
-      </DataTable>
-      <PagLabel from={1} to={filtered.length} total={D_PHONG_BAN.length}/>
+      <Toolbar addLabel="Thêm phòng ban" onAdd={() => { setTarget(null); setModal('add') }} search={search} setSearch={setSearch}/>
+
+      {fetching ? (
+        <div className="bg-white rounded border border-gray-200 p-10 text-center text-gray-400 text-sm">Đang tải...</div>
+      ) : (
+        <DataTable headers={['Avatar', 'Tên phòng ban', 'Slug', 'Địa điểm', 'Thao tác']}>
+          {filtered.map((d: any) => (
+            <tr key={d._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3"><Av label={d.name} color="bg-gradient-to-br from-[#17c3d8] to-[#0e7c8a]"/></td>
+              <td className="px-4 py-3 font-semibold text-gray-800">{d.name}</td>
+              <td className="px-4 py-3 font-mono text-xs text-gray-400">{d.slug}</td>
+              <td className="px-4 py-3 text-gray-500 text-xs">{d.location || '—'}</td>
+              <td className="px-4 py-3 text-center">
+                <ThreeDot onEdit={() => { setTarget(d); setModal('edit') }} onDelete={() => setConfirm(d)}/>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+      )}
+      <PagLabel from={1} to={filtered.length} total={depts.length}/>
+
+      {modal && (
+        <DeptModal mode={modal} initial={target}
+          onClose={() => setModal(null)}
+          onSaved={() => { load(); setModal(null) }}
+          showToast={showToast}/>
+      )}
+
+      {confirm && (
+        <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+            <h3 className="font-bold text-gray-800 mb-2">Xóa phòng ban?</h3>
+            <p className="text-sm text-gray-500 mb-5">Phòng ban <strong>{confirm.name}</strong> sẽ bị xóa vĩnh viễn.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirm(null)}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">Huỷ</button>
+              <button onClick={() => handleDelete(confirm)}
+                className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold">Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 /* ═══════════════════════════════════════════════════════════
-   3. MENU CHUYÊN MỤC
+   3. QUẢN LÝ CHUYÊN MỤC (fetch từ /api/categories)
 ══════════════════════════════════════════════════════════ */
-function SectionMenuChuyenMuc() {
-  const [catFilter,  setCatFilter]  = useState('Thời sự')
-  const [posFilter,  setPosFilter]  = useState('Menu top')
-  const [showFilter, setShowFilter] = useState('Hiển thị')
-  const [tagSearch,  setTagSearch]  = useState('')
+function SectionMenuChuyenMuc({ showToast }: { showToast: (m: string, t: 'ok'|'err') => void }) {
+  const [cats,     setCats]     = useState<any[]>([])
+  const [fetching, setFetching] = useState(true)
+  const [search,   setSearch]   = useState('')
+  const [modal,    setModal]    = useState<'add'|'edit'|null>(null)
+  const [target,   setTarget]   = useState<any>(null)
+  const [confirm,  setConfirm]  = useState<any>(null)
 
-  const menus = [
-    { id:1, cat:'Thời sự', pos:'Menu top', status:'Hiển thị', order:1 },
-    { id:2, cat:'Kinh tế', pos:'Menu top', status:'Hiển thị', order:2 },
-    { id:3, cat:'Xã hội',  pos:'Menu footer', status:'Ẩn',    order:3 },
-  ]
-  const tags = ['thời-sự','kinh-tế','xã-hội','công-nghệ','thể-thao','giải-trí','sức-khỏe']
+  const load = useCallback(() => {
+    setFetching(true)
+    fetch('/api/categories')
+      .then(r => r.json())
+      .then(d => { if (d.ok) setCats(d.data) })
+      .catch(() => {})
+      .finally(() => setFetching(false))
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const parentName = (pid: string | null) => pid ? (cats.find(c => c._id === pid)?.name ?? '—') : '—'
+
+  const handleDelete = async (cat: any) => {
+    const res = await fetch(`/api/categories/${cat._id}`, { method: 'DELETE' })
+    const d   = await res.json()
+    if (d.ok) { showToast('Đã vô hiệu hoá chuyên mục', 'ok'); load() }
+    else showToast(d.error || 'Lỗi', 'err')
+    setConfirm(null)
+  }
+
+  const filtered = cats.filter(c =>
+    !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.slug.includes(search)
+  )
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <button className="flex items-center gap-1.5 bg-[#17a2b8] hover:bg-[#138496] text-white text-xs font-bold px-3.5 py-2 rounded transition-colors">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-          Thêm menu mới
-        </button>
-        <select value={catFilter} onChange={e=>setCatFilter(e.target.value)}
-          className="px-2.5 py-1.5 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:border-[#17a2b8]">
-          {['Thời sự','Kinh tế','Xã hội','Công nghệ','Thể thao'].map(c=><option key={c}>{c}</option>)}
-        </select>
-        <select value={posFilter} onChange={e=>setPosFilter(e.target.value)}
-          className="px-2.5 py-1.5 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:border-[#17a2b8]">
-          {['Menu top','Menu footer','Menu sidebar'].map(p=><option key={p}>{p}</option>)}
-        </select>
-        <select value={showFilter} onChange={e=>setShowFilter(e.target.value)}
-          className="px-2.5 py-1.5 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:border-[#17a2b8]">
-          <option>Hiển thị</option><option>Ẩn</option>
-        </select>
-      </div>
+      <Toolbar addLabel="Thêm chuyên mục" onAdd={() => { setTarget(null); setModal('add') }} search={search} setSearch={setSearch}/>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Danh sách menu */}
-        <div className="bg-white rounded border border-gray-200 overflow-hidden">
-          <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
-            <p className="text-xs font-bold text-gray-600">Danh sách menu</p>
-          </div>
-          {menus.map(m => (
-            <div key={m.id} className="flex items-center justify-between px-4 py-3 border-b border-gray-100 hover:bg-gray-50">
-              <div>
-                <p className="text-xs font-semibold text-gray-800">{m.cat}</p>
-                <p className="text-[10px] text-gray-400">{m.pos} · Thứ tự: {m.order}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <SPill on={m.status === 'Hiển thị'}/>
-                <ThreeDot onEdit={() => {}} onDelete={() => {}}/>
-              </div>
-            </div>
+      {fetching ? (
+        <div className="bg-white rounded border border-gray-200 p-10 text-center text-gray-400 text-sm">Đang tải...</div>
+      ) : (
+        <DataTable headers={['Tên chuyên mục', 'Slug', 'Chuyên mục cha', 'Thứ tự', 'Thao tác']}>
+          {filtered.map((c: any) => (
+            <tr key={c._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Av label={c.name} color="bg-[#17a2b8]"/>
+                  <span className="font-semibold text-gray-800">{c.name}</span>
+                </div>
+              </td>
+              <td className="px-4 py-3 font-mono text-xs text-gray-400">{c.slug}</td>
+              <td className="px-4 py-3 text-gray-500 text-xs">{parentName(c.parentId)}</td>
+              <td className="px-4 py-3 text-center font-mono text-gray-600">{c.displayOrder}</td>
+              <td className="px-4 py-3 text-center">
+                <ThreeDot onEdit={() => { setTarget(c); setModal('edit') }} onDelete={() => setConfirm(c)}/>
+              </td>
+            </tr>
           ))}
-        </div>
+        </DataTable>
+      )}
+      <PagLabel from={1} to={filtered.length} total={cats.length}/>
 
-        {/* Danh sách tag */}
-        <div className="bg-white rounded border border-gray-200 overflow-hidden">
-          <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-            <p className="text-xs font-bold text-gray-600">Danh sách tag</p>
-          </div>
-          <div className="p-3 border-b border-gray-100">
-            <div className="relative">
-              <input value={tagSearch} onChange={e=>setTagSearch(e.target.value)} placeholder="Nhập từ khóa..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-[#17a2b8]"/>
-              <svg className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
+      {modal && (
+        <CatModal mode={modal} cats={cats} initial={target}
+          onClose={() => setModal(null)}
+          onSaved={() => { load(); setModal(null) }}
+          showToast={showToast}/>
+      )}
+
+      {confirm && (
+        <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+            <h3 className="font-bold text-gray-800 mb-2">Vô hiệu hoá chuyên mục?</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              <strong>{confirm.name}</strong> sẽ bị ẩn. Bài viết hiện có không bị xóa.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirm(null)}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">Huỷ</button>
+              <button onClick={() => handleDelete(confirm)}
+                className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold">Vô hiệu hoá</button>
             </div>
           </div>
-          <div className="p-3 flex flex-wrap gap-2">
-            {tags.filter(t => !tagSearch || t.includes(tagSearch.toLowerCase())).map(t => (
-              <span key={t} className="px-2.5 py-1 bg-gray-100 text-gray-600 text-[11px] rounded-full cursor-pointer hover:bg-[#e8f7f9] hover:text-[#17a2b8] transition-colors">
-                #{t}
-              </span>
-            ))}
-          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -739,24 +850,85 @@ function SectionTroLyTin({ search, setSearch }: any) {
 /* ═══════════════════════════════════════════════════════════
    6. PROFILE TÁC GIẢ
 ══════════════════════════════════════════════════════════ */
-function SectionTacGia({ search, setSearch, onEdit }: any) {
-  const filtered = D_TAC_GIA.filter(t => !search || t.name.toLowerCase().includes(search.toLowerCase()))
-  const colors = ['bg-blue-500','bg-teal-500','bg-violet-500','bg-orange-500','bg-rose-500']
+function SectionTacGia({ showToast }: { showToast: (m: string, t: 'ok'|'err') => void }) {
+  const [authors,  setAuthors]  = useState<any[]>([])
+  const [fetching, setFetching] = useState(true)
+  const [search,   setSearch]   = useState('')
+  const [modal,    setModal]    = useState<'add'|'edit'|null>(null)
+  const [target,   setTarget]   = useState<any>(null)
+  const [confirm,  setConfirm]  = useState<any>(null)
+
+  const load = useCallback(() => {
+    setFetching(true)
+    fetch('/api/authors')
+      .then(r => r.json())
+      .then(d => { if (d.ok) setAuthors(d.data) })
+      .catch(() => {})
+      .finally(() => setFetching(false))
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const handleDelete = async (a: any) => {
+    const res = await fetch(`/api/authors/${a._id}`, { method: 'DELETE' })
+    const d   = await res.json()
+    if (d.ok) { showToast('Đã vô hiệu hoá tác giả', 'ok'); load() }
+    else showToast(d.error || 'Lỗi', 'err')
+    setConfirm(null)
+  }
+
+  const filtered = authors.filter(a =>
+    !search || a.name.toLowerCase().includes(search.toLowerCase()) || a.email?.toLowerCase().includes(search.toLowerCase())
+  )
+  const COLORS = ['bg-blue-500','bg-teal-500','bg-violet-500','bg-orange-500','bg-rose-500']
+
   return (
     <div>
-      <Toolbar addLabel="Thêm tác giả mới" search={search} setSearch={setSearch}/>
-      <DataTable headers={['Avatar', 'Tên tác giả', 'Mô tả', 'Bài viết', 'Thao tác']}>
-        {filtered.map((t,i) => (
-          <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-            <td className="px-4 py-3"><Av label={t.name} color={colors[i % colors.length]}/></td>
-            <td className="px-4 py-3 font-semibold text-gray-800">{t.name}</td>
-            <td className="px-4 py-3 text-gray-500">{t.desc}</td>
-            <td className="px-4 py-3 text-center font-mono text-gray-600">{t.articles}</td>
-            <td className="px-4 py-3 text-center"><ThreeDot onEdit={() => onEdit(t)} onDelete={() => {}}/></td>
-          </tr>
-        ))}
-      </DataTable>
-      <PagLabel from={1} to={filtered.length} total={33}/>
+      <Toolbar addLabel="Thêm tác giả mới" onAdd={() => { setTarget(null); setModal('add') }} search={search} setSearch={setSearch}/>
+
+      {fetching ? (
+        <div className="bg-white rounded border border-gray-200 p-10 text-center text-gray-400 text-sm">Đang tải...</div>
+      ) : (
+        <DataTable headers={['Avatar', 'Tên tác giả', 'Bio', 'Email', 'Thao tác']}>
+          {filtered.map((a: any, i: number) => (
+            <tr key={a._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3">
+                {a.avatar
+                  ? <img src={a.avatar} alt={a.name} className="w-8 h-8 rounded-full object-cover"/>
+                  : <Av label={a.name} color={COLORS[i % COLORS.length]}/>}
+              </td>
+              <td className="px-4 py-3 font-semibold text-gray-800">{a.name}</td>
+              <td className="px-4 py-3 text-gray-500 text-xs max-w-xs"><p className="line-clamp-1">{a.bio || '—'}</p></td>
+              <td className="px-4 py-3 text-gray-400 text-xs">{a.email || '—'}</td>
+              <td className="px-4 py-3 text-center">
+                <ThreeDot onEdit={() => { setTarget(a); setModal('edit') }} onDelete={() => setConfirm(a)}/>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+      )}
+      <PagLabel from={1} to={filtered.length} total={authors.length}/>
+
+      {modal && (
+        <AuthorModal mode={modal} initial={target}
+          onClose={() => setModal(null)}
+          onSaved={() => { load(); setModal(null) }}
+          showToast={showToast}/>
+      )}
+
+      {confirm && (
+        <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+            <h3 className="font-bold text-gray-800 mb-2">Vô hiệu hoá tác giả?</h3>
+            <p className="text-sm text-gray-500 mb-5">Tác giả <strong>{confirm.name}</strong> sẽ bị ẩn khỏi hệ thống.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirm(null)}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">Huỷ</button>
+              <button onClick={() => handleDelete(confirm)}
+                className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold">Vô hiệu hoá</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -951,6 +1123,310 @@ function SectionMagazine({ search, setSearch }: any) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   QUẢN LÝ NGƯỜI DÙNG (fetch từ /api/users)
+══════════════════════════════════════════════════════════ */
+function SectionNguoiDung({ showToast }: { showToast: (m: string, t: 'ok'|'err') => void }) {
+  const [users,    setUsers]    = useState<any[]>([])
+  const [fetching, setFetching] = useState(true)
+  const [search,   setSearch]   = useState('')
+  const [modal,    setModal]    = useState<'add'|'edit'|null>(null)
+  const [target,   setTarget]   = useState<any>(null)
+  const [confirm,  setConfirm]  = useState<any>(null)
+
+  const load = useCallback(() => {
+    setFetching(true)
+    fetch('/api/users')
+      .then(r => r.json())
+      .then(d => { if (d.ok) setUsers(d.data) })
+      .catch(() => {})
+      .finally(() => setFetching(false))
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const handleDelete = async (u: any) => {
+    const res = await fetch(`/api/users/${u._id}`, { method: 'DELETE' })
+    const d   = await res.json()
+    if (d.ok) { showToast('Đã xóa tài khoản', 'ok'); load() }
+    else showToast(d.error || 'Lỗi', 'err')
+    setConfirm(null)
+  }
+
+  const roleBadge = (role: string) => {
+    const cls: Record<string, string> = {
+      admin:    'bg-red-100 text-red-700',
+      editor:   'bg-blue-100 text-blue-700',
+      reporter: 'bg-green-100 text-green-700',
+    }
+    const lbl: Record<string, string> = {
+      admin: 'Admin', editor: 'Biên tập', reporter: 'Phóng viên',
+    }
+    return <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${cls[role] || 'bg-gray-100 text-gray-500'}`}>{lbl[role] || role}</span>
+  }
+
+  const filtered = users.filter(u =>
+    !search ||
+    u.username?.toLowerCase().includes(search.toLowerCase()) ||
+    u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+    u.email?.toLowerCase().includes(search.toLowerCase())
+  )
+  const COLORS = ['bg-blue-500','bg-teal-500','bg-violet-500','bg-orange-500','bg-rose-500','bg-indigo-500']
+
+  return (
+    <div>
+      <Toolbar addLabel="Thêm tài khoản" onAdd={() => { setTarget(null); setModal('add') }} search={search} setSearch={setSearch}/>
+
+      {fetching ? (
+        <div className="bg-white rounded border border-gray-200 p-10 text-center text-gray-400 text-sm">Đang tải...</div>
+      ) : (
+        <DataTable headers={['Avatar', 'Tài khoản', 'Họ và tên', 'Email', 'Vai trò', 'Thao tác']}>
+          {filtered.map((u: any, i: number) => (
+            <tr key={u._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3"><Av label={u.fullName || u.username} color={COLORS[i % COLORS.length]}/></td>
+              <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-800">{u.username}</td>
+              <td className="px-4 py-3 text-gray-700">{u.fullName}</td>
+              <td className="px-4 py-3 text-gray-400 text-xs">{u.email || '—'}</td>
+              <td className="px-4 py-3">{roleBadge(u.role)}</td>
+              <td className="px-4 py-3 text-center">
+                <ThreeDot onEdit={() => { setTarget(u); setModal('edit') }} onDelete={() => setConfirm(u)}/>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+      )}
+      <PagLabel from={1} to={filtered.length} total={users.length}/>
+
+      {modal && (
+        <UserModal mode={modal} initial={target}
+          onClose={() => setModal(null)}
+          onSaved={() => { load(); setModal(null) }}
+          showToast={showToast}/>
+      )}
+
+      {confirm && (
+        <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+            <h3 className="font-bold text-gray-800 mb-2">Xóa tài khoản?</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Tài khoản <strong>{confirm.username}</strong> ({confirm.fullName}) sẽ bị xóa vĩnh viễn.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirm(null)}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">Huỷ</button>
+              <button onClick={() => handleDelete(confirm)}
+                className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold">Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL: NGƯỜI DÙNG
+══════════════════════════════════════════════════════════ */
+function UserModal({ mode, initial, onClose, onSaved, showToast }: {
+  mode: 'add'|'edit'
+  initial: any
+  onClose: () => void
+  onSaved: () => void
+  showToast: (m: string, t: 'ok'|'err') => void
+}) {
+  const [username, setUsername] = useState(initial?.username || '')
+  const [fullName, setFullName] = useState(initial?.fullName || '')
+  const [email,    setEmail]    = useState(initial?.email    || '')
+  const [role,     setRole]     = useState<'reporter'|'editor'|'admin'>(initial?.role || 'reporter')
+  const [password, setPassword] = useState('')
+  const [saving,   setSaving]   = useState(false)
+
+  const handleSubmit = async () => {
+    if (mode === 'add' && (!username.trim() || !password || !fullName.trim())) {
+      showToast('Vui lòng điền đầy đủ thông tin bắt buộc', 'err'); return
+    }
+    if (mode === 'add' && password.length < 6) {
+      showToast('Mật khẩu tối thiểu 6 ký tự', 'err'); return
+    }
+    setSaving(true)
+    try {
+      const body: Record<string, unknown> = { fullName: fullName.trim(), email: email.trim(), role }
+      if (mode === 'add') { body.username = username.trim().toLowerCase(); body.password = password }
+      else if (password) body.password = password
+
+      const url = mode === 'edit' ? `/api/users/${initial._id}` : '/api/users'
+      const res = await fetch(url, {
+        method: mode === 'edit' ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const d = await res.json()
+      if (d.ok) { showToast(mode === 'edit' ? 'Đã cập nhật tài khoản' : 'Đã tạo tài khoản mới', 'ok'); onSaved() }
+      else showToast(d.error || 'Lỗi', 'err')
+    } catch { showToast('Lỗi kết nối', 'err') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-sm font-bold text-gray-800">{mode === 'edit' ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản mới'}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded text-gray-500 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          {mode === 'add' ? (
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tên đăng nhập <span className="text-red-500">*</span></label>
+              <input value={username} onChange={e => setUsername(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8] font-mono"
+                placeholder="vd: ngoclm_vcc"/>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+              <span className="text-xs text-gray-400">Tài khoản:</span>
+              <span className="text-xs font-mono font-bold text-gray-700">{initial?.username}</span>
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Họ và tên <span className="text-red-500">*</span></label>
+            <input value={fullName} onChange={e => setFullName(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder="Nguyễn Văn A"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder="email@example.com"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Vai trò</label>
+            <select value={role} onChange={e => setRole(e.target.value as typeof role)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8] bg-white">
+              <option value="reporter">Phóng viên</option>
+              <option value="editor">Biên tập viên</option>
+              <option value="admin">Quản trị viên</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              {mode === 'add' ? <><span>Mật khẩu</span> <span className="text-red-500">*</span></> : 'Đổi mật khẩu (để trống nếu không đổi)'}
+            </label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder={mode === 'add' ? 'Tối thiểu 6 ký tự' : '••••••'}/>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-200 bg-gray-50">
+          <button onClick={onClose}
+            className="px-5 py-2 text-sm font-bold border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">ĐÓNG</button>
+          <button onClick={handleSubmit} disabled={saving}
+            className="px-5 py-2 text-sm font-bold bg-[#17a2b8] text-white rounded-lg hover:bg-[#138496] disabled:opacity-50 transition-colors">
+            {saving ? 'Đang lưu...' : 'LƯU'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL: CHUYÊN MỤC
+══════════════════════════════════════════════════════════ */
+function CatModal({ mode, cats, initial, onClose, onSaved, showToast }: {
+  mode: 'add'|'edit'
+  cats: any[]
+  initial: any
+  onClose: () => void
+  onSaved: () => void
+  showToast: (m: string, t: 'ok'|'err') => void
+}) {
+  const toSlug = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+  const [name,         setName]         = useState(initial?.name         || '')
+  const [slug,         setSlug]         = useState(initial?.slug         || '')
+  const [parentId,     setParentId]     = useState(initial?.parentId     || '')
+  const [displayOrder, setDisplayOrder] = useState(initial?.displayOrder ?? 0)
+  const [slugEdited,   setSlugEdited]   = useState(false)
+  const [saving,       setSaving]       = useState(false)
+
+  const handleName = (v: string) => {
+    setName(v)
+    if (!slugEdited) setSlug(toSlug(v))
+  }
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !slug.trim()) { showToast('Tên và slug không được để trống', 'err'); return }
+    setSaving(true)
+    try {
+      const body = { name: name.trim(), slug: slug.trim(), parentId: parentId || null, displayOrder }
+      const url  = mode === 'edit' ? `/api/categories/${initial._id}` : '/api/categories'
+      const res  = await fetch(url, {
+        method: mode === 'edit' ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const d = await res.json()
+      if (d.ok) { showToast(mode === 'edit' ? 'Đã cập nhật chuyên mục' : 'Đã tạo chuyên mục mới', 'ok'); onSaved() }
+      else showToast(d.error || 'Lỗi', 'err')
+    } catch { showToast('Lỗi kết nối', 'err') }
+    finally { setSaving(false) }
+  }
+
+  const parentOptions = cats.filter(c => mode === 'add' || c._id !== initial?._id)
+
+  return (
+    <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-sm font-bold text-gray-800">{mode === 'edit' ? 'Chỉnh sửa chuyên mục' : 'Thêm chuyên mục mới'}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded text-gray-500 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tên chuyên mục <span className="text-red-500">*</span></label>
+            <input value={name} onChange={e => handleName(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder="Ví dụ: Thời sự"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Slug <span className="text-red-500">*</span></label>
+            <input value={slug} onChange={e => { setSlug(e.target.value); setSlugEdited(true) }}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8] font-mono"
+              placeholder="thoi-su"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Chuyên mục cha</label>
+            <select value={parentId} onChange={e => setParentId(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8] bg-white">
+              <option value="">— Chuyên mục gốc —</option>
+              {parentOptions.map((c: any) => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Thứ tự hiển thị</label>
+            <input type="number" value={displayOrder} onChange={e => setDisplayOrder(+e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"/>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-200 bg-gray-50">
+          <button onClick={onClose}
+            className="px-5 py-2 text-sm font-bold border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">ĐÓNG</button>
+          <button onClick={handleSubmit} disabled={saving || !name.trim() || !slug.trim()}
+            className="px-5 py-2 text-sm font-bold bg-[#17a2b8] text-white rounded-lg hover:bg-[#138496] disabled:opacity-50 transition-colors">
+            {saving ? 'Đang lưu...' : 'LƯU'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
    12. MP3 (EMPTY STATE)
 ══════════════════════════════════════════════════════════ */
 function SectionMp3({ search, setSearch }: any) {
@@ -997,6 +1473,174 @@ function SectionMp3({ search, setSearch }: any) {
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DEPT MODAL
+══════════════════════════════════════════════════════════ */
+function DeptModal({ mode, initial, onClose, onSaved, showToast }: {
+  mode: 'add'|'edit'; initial: any; onClose: () => void; onSaved: () => void
+  showToast: (m: string, t: 'ok'|'err') => void
+}) {
+  const toSlug = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+  const [name,       setName]       = useState(initial?.name     || '')
+  const [slug,       setSlug]       = useState(initial?.slug     || '')
+  const [location,   setLocation]   = useState(initial?.location || '')
+  const [slugEdited, setSlugEdited] = useState(false)
+  const [saving,     setSaving]     = useState(false)
+
+  const handleName = (v: string) => { setName(v); if (!slugEdited) setSlug(toSlug(v)) }
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !slug.trim()) { showToast('Tên và slug không được để trống', 'err'); return }
+    setSaving(true)
+    try {
+      const url = mode === 'edit' ? `/api/departments/${initial._id}` : '/api/departments'
+      const res = await fetch(url, {
+        method: mode === 'edit' ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), slug: slug.trim(), location: location.trim() }),
+      })
+      const d = await res.json()
+      if (d.ok) { showToast(mode === 'edit' ? 'Đã cập nhật phòng ban' : 'Đã tạo phòng ban mới', 'ok'); onSaved() }
+      else showToast(d.error || 'Lỗi', 'err')
+    } catch { showToast('Lỗi kết nối', 'err') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-sm font-bold text-gray-800">{mode === 'edit' ? 'Chỉnh sửa phòng ban' : 'Thêm phòng ban mới'}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded text-gray-500 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tên phòng ban <span className="text-red-500">*</span></label>
+            <input value={name} onChange={e => handleName(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder="Văn phòng Hà Nội"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Slug <span className="text-red-500">*</span></label>
+            <input value={slug} onChange={e => { setSlug(e.target.value); setSlugEdited(true) }}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8] font-mono"
+              placeholder="van-phong-ha-noi"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Địa điểm</label>
+            <input value={location} onChange={e => setLocation(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder="Hà Nội"/>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-200 bg-gray-50">
+          <button onClick={onClose}
+            className="px-5 py-2 text-sm font-bold border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">ĐÓNG</button>
+          <button onClick={handleSubmit} disabled={saving || !name.trim() || !slug.trim()}
+            className="px-5 py-2 text-sm font-bold bg-[#17a2b8] text-white rounded-lg hover:bg-[#138496] disabled:opacity-50 transition-colors">
+            {saving ? 'Đang lưu...' : 'LƯU'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AUTHOR MODAL
+══════════════════════════════════════════════════════════ */
+function AuthorModal({ mode, initial, onClose, onSaved, showToast }: {
+  mode: 'add'|'edit'; initial: any; onClose: () => void; onSaved: () => void
+  showToast: (m: string, t: 'ok'|'err') => void
+}) {
+  const toSlug = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+  const [name,       setName]       = useState(initial?.name   || '')
+  const [slug,       setSlug]       = useState(initial?.slug   || '')
+  const [bio,        setBio]        = useState(initial?.bio    || '')
+  const [email,      setEmail]      = useState(initial?.email  || '')
+  const [avatar,     setAvatar]     = useState(initial?.avatar || '')
+  const [slugEdited, setSlugEdited] = useState(false)
+  const [saving,     setSaving]     = useState(false)
+
+  const handleName = (v: string) => { setName(v); if (!slugEdited) setSlug(toSlug(v)) }
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !slug.trim()) { showToast('Tên và slug không được để trống', 'err'); return }
+    setSaving(true)
+    try {
+      const url = mode === 'edit' ? `/api/authors/${initial._id}` : '/api/authors'
+      const res = await fetch(url, {
+        method: mode === 'edit' ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), slug: slug.trim(), bio: bio.trim(), email: email.trim(), avatar }),
+      })
+      const d = await res.json()
+      if (d.ok) { showToast(mode === 'edit' ? 'Đã cập nhật tác giả' : 'Đã tạo tác giả mới', 'ok'); onSaved() }
+      else showToast(d.error || 'Lỗi', 'err')
+    } catch { showToast('Lỗi kết nối', 'err') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-sm font-bold text-gray-800">{mode === 'edit' ? 'Chỉnh sửa tác giả' : 'Thêm tác giả mới'}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded text-gray-500 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tên tác giả <span className="text-red-500">*</span></label>
+            <input value={name} onChange={e => handleName(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder="Nguyễn Văn A"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Slug <span className="text-red-500">*</span></label>
+            <input value={slug} onChange={e => { setSlug(e.target.value); setSlugEdited(true) }}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8] font-mono"
+              placeholder="nguyen-van-a"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder="tacgia@example.com"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Giới thiệu (Bio)</label>
+            <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-[#17a2b8]"
+              placeholder="Phóng viên kỳ cựu với 10 năm kinh nghiệm..."/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">URL ảnh đại diện</label>
+            <input value={avatar} onChange={e => setAvatar(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder="https://..."/>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-200 bg-gray-50">
+          <button onClick={onClose}
+            className="px-5 py-2 text-sm font-bold border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">ĐÓNG</button>
+          <button onClick={handleSubmit} disabled={saving || !name.trim() || !slug.trim()}
+            className="px-5 py-2 text-sm font-bold bg-[#17a2b8] text-white rounded-lg hover:bg-[#138496] disabled:opacity-50 transition-colors">
+            {saving ? 'Đang lưu...' : 'LƯU'}
+          </button>
+        </div>
       </div>
     </div>
   )
