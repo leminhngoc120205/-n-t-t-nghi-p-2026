@@ -16,6 +16,7 @@ interface Article {
   sapo: string
   content: string
   thumbnail: string
+  slug: string
   articleType: string
   status: string
   writerId:    UserRef | null
@@ -57,15 +58,10 @@ const STATUS_GROUPS = [
   { label: 'TIN XỬ LÝ', items: [
     { id: 'waiting_edit',    label: 'Bài chờ biên tập'  },
     { id: 'waiting_publish', label: 'Bài chờ xuất bản'  },
-    { id: 'cross_post',      label: 'Bài đăng chéo'     },
     { id: 'published',       label: 'Bài đã xuất bản'   },
     { id: 'removed',         label: 'Bài bị gỡ xuống'   },
     { id: 'deleted',         label: 'Bài bị xóa'        },
     { id: 'returned',        label: 'Bài trả lại tôi'   },
-    { id: 'in_progress',     label: 'Bài đang xử lý'    },
-  ]},
-  { label: 'DẠNG TIN ĐẶC BIỆT', items: [
-    { id: 'magazine', label: 'Bài Magazine' },
   ]},
 ]
 
@@ -87,6 +83,7 @@ function BaiVietContent() {
   const [showTypeModal, setShowTypeModal] = useState(false)
   const [pagination,    setPagination]    = useState({ total: 0, page: 1, pages: 1 })
   const [userRole,      setUserRole]      = useState<string>('reporter')
+  const [userId,        setUserId]        = useState<string>('')
 
   /* ── Fetch counts + categories + current user ── */
   useEffect(() => {
@@ -102,7 +99,10 @@ function BaiVietContent() {
 
     fetch('/api/auth/me')
       .then(r => r.json())
-      .then(d => { if (d.user?.role) setUserRole(d.user.role) })
+      .then(d => {
+        if (d.user?.role) setUserRole(d.user.role)
+        if (d.user?.id)   setUserId(d.user.id)
+      })
       .catch(() => {})
   }, [])
 
@@ -110,8 +110,17 @@ function BaiVietContent() {
   const fetchArticles = useCallback(async (status: string, cat: string, page = 1) => {
     setLoading(true)
     try {
-      const apiStatus = status === 'mine_published' ? 'published' : status
-      const params = new URLSearchParams({ status: apiStatus, page: String(page), limit: '20' })
+      const params = new URLSearchParams({ page: String(page), limit: '20' })
+
+      if (status === 'mine_published') {
+        params.set('status', 'published')
+        if (userId) params.set('writerId', userId)
+      } else if (status === 'approved') {
+        if (userId) params.set('editorId', userId)
+      } else {
+        params.set('status', status)
+      }
+
       if (cat)          params.set('categoryId', cat)
       if (search)       params.set('search', search)
       if (filterAuthor) params.set('search', filterAuthor)
@@ -329,6 +338,29 @@ export default function BaiVietPage() {
 /* ═══════════════════════════════════════════════════════════
    HÀNG BÀI VIẾT
 ══════════════════════════════════════════════════════════ */
+const CAT_PALETTES = [
+  'from-red-500 to-rose-600',
+  'from-orange-500 to-amber-600',
+  'from-green-500 to-emerald-700',
+  'from-teal-500 to-cyan-600',
+  'from-blue-500 to-indigo-600',
+  'from-purple-500 to-violet-600',
+  'from-pink-500 to-rose-500',
+  'from-yellow-500 to-orange-500',
+  'from-cyan-500 to-blue-600',
+  'from-lime-500 to-green-600',
+]
+
+function catGradient(name: string) {
+  let h = 0
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) & 0x7fffffff
+  return CAT_PALETTES[h % CAT_PALETTES.length]
+}
+
+function catInitials(name: string) {
+  return name.split(/\s+/).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase() || 'BV'
+}
+
 function ArticleRow({ article: a, isLast, onSelect, onToggleHome, onToggleFeatured }: {
   article: Article; isLast: boolean
   onSelect: () => void; onToggleHome: () => void; onToggleFeatured: () => void
@@ -348,13 +380,20 @@ function ArticleRow({ article: a, isLast, onSelect, onToggleHome, onToggleFeatur
   return (
     <div className={`grid grid-cols-[72px_1fr_100px_80px_80px] gap-3 px-4 py-3 items-center hover:bg-gray-50 transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}>
 
-      <div className={`w-[68px] h-12 rounded flex items-center justify-center flex-shrink-0 text-white/80
-        ${a.isFeatured ? 'bg-gradient-to-br from-orange-400 to-rose-500' : 'bg-gradient-to-br from-slate-400 to-slate-500'}`}>
+      <div className="w-[68px] h-12 rounded overflow-hidden flex-shrink-0 relative">
         {a.thumbnail
-          ? <img src={a.thumbnail} alt="" className="w-full h-full object-cover rounded"/>
-          : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>}
+          ? <img src={a.thumbnail} alt="" className="w-full h-full object-cover"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}/>
+          : <div className={`w-full h-full bg-gradient-to-br ${catGradient(category)} flex flex-col items-center justify-center gap-0.5`}>
+              <span className="text-white font-bold text-sm leading-none tracking-wider drop-shadow">{catInitials(category)}</span>
+              {a.isFeatured && <span className="text-yellow-200 text-[9px] leading-none">★</span>}
+            </div>
+        }
+        {a.isFeatured && a.thumbnail && (
+          <div className="absolute top-0.5 right-0.5 bg-yellow-400 rounded-sm px-0.5 leading-none">
+            <span className="text-yellow-900 text-[8px] font-bold">★</span>
+          </div>
+        )}
       </div>
 
       <div className="min-w-0">
@@ -535,9 +574,10 @@ function ArticleDetailPanel({ article: a, showHistory, userRole, onToggleHistory
               <span className="text-xs text-gray-400 ml-auto">{date}</span>
             </div>
             {a.sapo && <p className="text-sm font-semibold text-gray-700 leading-relaxed mb-5 p-3 bg-gray-50 border-l-4 border-[#17a2b8] rounded-r">{a.sapo}</p>}
-            <div className="text-sm text-gray-700 leading-relaxed space-y-3">
-              {(a.content || '').split('\n').map((para, i) => para.trim() && <p key={i}>{para}</p>)}
-            </div>
+            <div
+              className="text-sm text-gray-700 leading-relaxed article-content"
+              dangerouslySetInnerHTML={{ __html: a.content || '' }}
+            />
             {a.source && <p className="mt-6 text-xs text-gray-400 italic border-t border-gray-100 pt-4">Nguồn: {a.source}</p>}
           </div>
 
@@ -599,8 +639,18 @@ function ArticleDetailPanel({ article: a, showHistory, userRole, onToggleHistory
 
           <div className="flex gap-2 flex-shrink-0">
             <button onClick={onClose} className="px-4 py-2 text-sm font-semibold border border-gray-300 text-gray-600 rounded hover:bg-gray-100 transition-colors">Đóng</button>
-            {['draft','returned'].includes(a.status) && (
-              <button onClick={onEdit} className="px-4 py-2 text-sm font-semibold bg-[#17a2b8] text-white rounded hover:bg-[#138496] transition-colors">Sửa</button>
+            {a.status === 'published' && a.slug && (
+              <a
+                href={`/bai-viet/${a.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 text-sm font-semibold border border-[#17a2b8] text-[#17a2b8] rounded hover:bg-[#e8f7f9] transition-colors"
+              >
+                Xem trang bài viết ↗
+              </a>
+            )}
+            {['draft','returned','processing','waiting_edit','waiting_publish'].includes(a.status) && (
+              <button onClick={onEdit} className="px-4 py-2 text-sm font-semibold bg-[#17a2b8] text-white rounded hover:bg-[#138496] transition-colors">Sửa bài</button>
             )}
           </div>
         </div>

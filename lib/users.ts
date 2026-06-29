@@ -73,6 +73,12 @@ const SEED_USERS = [
   { username: 'editor_vcc', plainPassword: 'Admin@123', fullName: 'Biên tập viên VCC',      email: 'editor@cnnd.vn',       phone: '',           role: 'editor'   as const },
 ]
 
+export async function touchLastLogin(id: string): Promise<void> {
+  await connectDB()
+  if (!Types.ObjectId.isValid(id)) return
+  await User.findByIdAndUpdate(id, { $set: { lastLoginAt: new Date() } })
+}
+
 export async function seedUsersIfEmpty(): Promise<void> {
   await connectDB()
   const count = await User.countDocuments()

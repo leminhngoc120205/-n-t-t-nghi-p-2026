@@ -49,7 +49,14 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     // không cho phép đổi status qua PATCH — dùng endpoint /status
     delete body.status
     delete body.writerId
-    delete body.publishedAt
+
+    // publishedAt / scheduledAt: chấp nhận string ISO từ frontend, chuyển sang Date
+    if (body.publishedAt !== undefined) {
+      body.publishedAt = body.publishedAt ? new Date(body.publishedAt as string) : null
+    }
+    if (body.scheduledAt !== undefined) {
+      body.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt as string) : null
+    }
 
     const updated = await Article.findByIdAndUpdate(params.id, body, { new: true, runValidators: true })
 

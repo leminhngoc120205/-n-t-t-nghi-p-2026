@@ -2,33 +2,45 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 
-const DOTS_MENU = [
-  { label: 'QUẢN LÝ DÒNG SỰ KIỆN', href: '/cau-hinh/dong-su-kien' },
-  { label: 'QUẢN LÝ CHỦ ĐỀ',       href: '/cau-hinh/chu-de' },
-  { label: 'QUẢN LÝ TÁC GIẢ',      href: '/cau-hinh/tac-gia' },
-]
+function RssIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 110-2 1 1 0 010 2z" />
+    </svg>
+  )
+}
+
+function DocIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  )
+}
+
+
+function SettingsIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+  )
+}
 
 const leftNavItems = [
-  { label: 'BÀI VIẾT', href: '/dashboard/bai-viet', icon: <DocIcon /> },
-  { label: 'PODCAST', href: '/dashboard/podcast', icon: <MicIcon /> },
-  { label: 'MẪU HTML', href: '/dashboard/mau-html', icon: <CodeIcon /> },
+  { label: 'BÀI VIẾT', href: '/dashboard/bai-viet',      icon: <DocIcon />,      match: '/dashboard/bai-viet' },
+  { label: 'RSS FEED',  href: '/dashboard/rss',           icon: <RssIcon />,      match: '/dashboard/rss' },
+  { label: 'QUẢN LÝ',  href: '/cau-hinh/dong-su-kien',   icon: <SettingsIcon />, match: '/cau-hinh' },
 ]
 
-const rightNavItems = [
-  { label: 'DỮ LIỆU', href: '/dashboard/du-lieu', icon: <DataIcon /> },
-  { label: 'DỊCH VỤ AI', href: '/dich-vu-ai', prefix: 'AI', icon: <AIIcon /> },
-]
 
 export const IMSTopBar = () => {
   const pathname = usePathname()
-  const router = useRouter()
   const { user, logout } = useAuth()
   const displayName = user?.username?.toUpperCase() ?? 'NGOCLM_VCC'
-  const [showDotsMenu, setShowDotsMenu] = useState(false)
-  const dotsRef = useRef<HTMLDivElement>(null)
 
   // User menu state
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -68,9 +80,6 @@ export const IMSTopBar = () => {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dotsRef.current && !dotsRef.current.contains(e.target as Node)) {
-        setShowDotsMenu(false)
-      }
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setShowUserMenu(false)
       }
@@ -125,7 +134,7 @@ export const IMSTopBar = () => {
       {/* Left Nav */}
       <nav className="flex items-center">
         {leftNavItems.map((item, i) => {
-          const isActive = pathname === item.href
+          const isActive = pathname?.startsWith(item.match)
           return (
             <React.Fragment key={item.label}>
               <Link
@@ -145,71 +154,9 @@ export const IMSTopBar = () => {
             </React.Fragment>
           )
         })}
-        <span className="text-gray-200 mx-1 select-none">|</span>
-        <div className="relative" ref={dotsRef}>
-          <button
-            onClick={() => {
-              setShowDotsMenu(prev => !prev)
-              router.push('/cau-hinh/dong-su-kien')
-            }}
-            className={`px-2 py-2 text-sm font-bold tracking-widest transition-colors ${
-              pathname?.startsWith('/cau-hinh')
-                ? 'text-[#17a2b8]'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            ···
-          </button>
-          {showDotsMenu && (
-            <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[220px] py-1">
-              {DOTS_MENU.map(item => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setShowDotsMenu(false)}
-                  className={`block px-4 py-2.5 text-[11px] font-semibold tracking-wide transition-colors ${
-                    pathname === item.href
-                      ? 'text-[#17a2b8] bg-[#e8f7f9]'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-[#17a2b8]'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
       </nav>
 
       <div className="flex-1" />
-
-      {/* Right Nav */}
-      <nav className="flex items-center">
-        {rightNavItems.map((item, i) => {
-          const isActive = pathname?.startsWith(item.href) && item.href !== '#'
-          return (
-            <React.Fragment key={item.label}>
-              <Link
-                href={item.href}
-                className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold transition-colors whitespace-nowrap tracking-wide ${
-                  isActive
-                    ? 'text-[#17a2b8] border-b-2 border-[#17a2b8]'
-                    : 'text-gray-600 hover:text-[#17a2b8]'
-                }`}
-              >
-                <span className={isActive ? 'text-[#17a2b8]' : 'text-gray-400'}>{item.icon}</span>
-                {item.prefix && (
-                  <span className={`font-bold mr-0.5 ${isActive ? 'text-[#17a2b8]' : 'text-[#17a2b8]'}`}>{item.prefix}</span>
-                )}
-                {item.label}
-              </Link>
-              {i < rightNavItems.length - 1 && (
-                <span className="text-gray-200 select-none">|</span>
-              )}
-            </React.Fragment>
-          )
-        })}
-      </nav>
 
       {/* User area */}
       <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-200">
@@ -239,20 +186,14 @@ export const IMSTopBar = () => {
               </div>
 
               {/* Menu items */}
-              <button
-                onClick={() => { setShowUserMenu(false); setShowProfileModal(true) }}
+              <Link
+                href="/dashboard/cai-dat"
+                onClick={() => setShowUserMenu(false)}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                <UserCircleIcon />
-                Sửa profile
-              </button>
-              <button
-                onClick={() => { setShowUserMenu(false); setShowPasswordModal(true) }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <KeyIcon />
-                Đổi mật khẩu
-              </button>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Cài đặt tài khoản
+              </Link>
               <button
                 onClick={() => { setShowUserMenu(false); setShowTelegramModal(true) }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -440,42 +381,6 @@ const TopbarLogo = () => (
     />
   </svg>
 )
-
-function DocIcon() {
-  return (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  )
-}
-function MicIcon() {
-  return (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4M9 11V7a3 3 0 016 0v4a3 3 0 01-6 0z" />
-    </svg>
-  )
-}
-function CodeIcon() {
-  return (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-    </svg>
-  )
-}
-function DataIcon() {
-  return (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-    </svg>
-  )
-}
-function AIIcon() {
-  return (
-    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-    </svg>
-  )
-}
 
 function SmileIcon() {
   return (

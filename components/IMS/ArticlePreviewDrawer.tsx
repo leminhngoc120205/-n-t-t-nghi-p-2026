@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react'
 type ArticleFull = {
   _id: string
   title: string
+  slug?: string
   sapo?: string
   content?: string
   source?: string
@@ -38,6 +39,7 @@ export function ArticlePreviewDrawer({ articleId, onClose }: { articleId: string
       .then(d => { if (d.ok) setArticle(d.data) })
       .catch(() => {})
       .finally(() => setLoading(false))
+    fetch(`/api/articles/${articleId}/view`, { method: 'PATCH' }).catch(() => {})
   }, [articleId])
 
   useEffect(() => {
@@ -158,7 +160,20 @@ export function ArticlePreviewDrawer({ articleId, onClose }: { articleId: string
               {status && <span className={`text-xs font-semibold px-2 py-0.5 rounded ${status.cls}`}>{status.label}</span>}
               {a.viewCount != null && <span className="text-xs text-gray-500">{a.viewCount.toLocaleString()} lượt xem</span>}
             </div>
-            <button onClick={onClose} className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Đóng</button>
+            <div className="flex items-center gap-2">
+              {a.status === 'published' && a.slug && (
+                <a
+                  href={`/bai-viet/${a.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ background: '#17a2b8', color: '#fff' }}
+                >
+                  Xem bài đã xuất bản →
+                </a>
+              )}
+              <button onClick={onClose} className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Đóng</button>
+            </div>
           </div>
         )}
       </div>

@@ -10,17 +10,16 @@ export async function GET() {
       status: 'published',
       publishedAt: { $gte: since },
     })
-      .sort({ publishedAt: -1 })
+      .sort({ viewCount: -1, publishedAt: -1 })
       .limit(5)
-      .select('title publishedAt viewCount')
+      .select('title publishedAt viewCount thumbnail slug sourceUrl')
       .lean()
 
-    // Nếu 7 ngày không đủ 5 bài thì lấy thêm bài cũ hơn
     if (articles.length < 5) {
       const extra = await Article.find({ status: 'published' })
-        .sort({ publishedAt: -1 })
+        .sort({ viewCount: -1, publishedAt: -1 })
         .limit(5)
-        .select('title publishedAt viewCount')
+        .select('title publishedAt viewCount thumbnail slug sourceUrl')
         .lean()
       return NextResponse.json({ ok: true, data: extra })
     }

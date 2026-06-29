@@ -1,14 +1,35 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { IMSArticleTypeModal } from './IMSArticleTypeModal'
 import QuickTaskPanel from './QuickTaskPanel'
 
-const TASK_COUNT = 4
-
 export const IMSSidebar = () => {
-  const [showModal, setShowModal] = useState(false)
+  const [showModal,     setShowModal]     = useState(false)
   const [showQuickTask, setShowQuickTask] = useState(false)
+  const [taskCount,     setTaskCount]     = useState(0)
+
+  const fetchCount = useCallback(async () => {
+    try {
+      const [r1, r2, r3] = await Promise.all([
+        fetch('/api/articles?status=waiting_edit&limit=1').then(r => r.json()),
+        fetch('/api/articles?status=waiting_publish&limit=1').then(r => r.json()),
+        fetch('/api/articles?status=returned&limit=1').then(r => r.json()),
+      ])
+      const total =
+        (r1.ok ? (r1.pagination?.total ?? r1.data?.length ?? 0) : 0) +
+        (r2.ok ? (r2.pagination?.total ?? r2.data?.length ?? 0) : 0) +
+        (r3.ok ? (r3.pagination?.total ?? r3.data?.length ?? 0) : 0)
+      setTaskCount(total)
+    } catch {}
+  }, [])
+
+  useEffect(() => { fetchCount() }, [fetchCount])
+
+  const handleClosePanel = () => {
+    setShowQuickTask(false)
+    fetchCount()
+  }
 
   return (
     <>
@@ -51,17 +72,16 @@ export const IMSSidebar = () => {
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
-          {TASK_COUNT > 0 && (
+          {taskCount > 0 && (
             <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-orange-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold px-0.5 leading-none">
-              {TASK_COUNT}
+              {taskCount > 99 ? '99+' : taskCount}
             </span>
           )}
         </button>
-
       </aside>
 
-      {showModal && <IMSArticleTypeModal onClose={() => setShowModal(false)} />}
-      {showQuickTask && <QuickTaskPanel onClose={() => setShowQuickTask(false)} />}
+      {showModal     && <IMSArticleTypeModal onClose={() => setShowModal(false)} />}
+      {showQuickTask && <QuickTaskPanel onClose={handleClosePanel} />}
     </>
   )
 }

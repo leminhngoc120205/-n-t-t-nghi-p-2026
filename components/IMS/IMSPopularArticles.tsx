@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { ArticlePreviewDrawer } from './ArticlePreviewDrawer'
 
 type Article = {
   _id?: string
   title: string
+  slug?: string
+  sourceUrl?: string
   publishedAt?: string
   viewCount: number
   ctr: number
@@ -73,7 +74,6 @@ export const IMSPopularArticles = () => {
   const [pool, setPool] = useState<Article[]>(ARTICLE_POOL)
   const [isMock, setIsMock] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [previewId, setPreviewId] = useState<string | null>(null)
 
   const articles = applyDevice(pool, device, isMock)
 
@@ -83,15 +83,20 @@ export const IMSPopularArticles = () => {
       const res = await fetch('/api/articles/popular')
       const data = await res.json()
       if (data.ok && data.data?.length > 0) {
-        setPool(data.data.map((a: any) => ({
-          _id:         a._id,
-          title:       a.title,
-          publishedAt: a.publishedAt,
-          viewCount:   a.viewCount ?? 0,
-          ctr:    +(Math.random() * 10 + 0.5).toFixed(2),
-          bounce: +(Math.random() * 6  + 93).toFixed(2),
-          source: Math.floor(Math.random() * 40 + 55),
-        })))
+        setPool(data.data.map((a: any) => {
+          const seed = parseInt((a._id as string)?.slice(-4) ?? '0', 16)
+          return {
+            _id:         a._id,
+            title:       a.title,
+            slug:        a.slug ?? '',
+            sourceUrl:   a.sourceUrl ?? '',
+            publishedAt: a.publishedAt,
+            viewCount:   a.viewCount ?? 0,
+            ctr:    +((seed % 1000) / 100 + 1).toFixed(2),
+            bounce: +((seed % 600)  / 100 + 92).toFixed(2),
+            source: (seed % 40) + 55,
+          }
+        }))
         setIsMock(false)
       }
     } catch {
@@ -179,12 +184,18 @@ export const IMSPopularArticles = () => {
               return (
                 <tr key={article._id ?? i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3 text-gray-700 leading-snug max-w-xs">
-                    <button
-                      onClick={() => article._id && setPreviewId(article._id)}
-                      className={`text-left hover:text-[#17a2b8] transition-colors line-clamp-2 ${article._id ? 'cursor-pointer' : ''}`}
-                    >
-                      {article.title}
-                    </button>
+                    {(article.sourceUrl || article.slug) ? (
+                      <a
+                        href={article.sourceUrl || `/bai-viet/${article.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-[#17a2b8] transition-colors line-clamp-2 cursor-pointer"
+                      >
+                        {article.title}
+                      </a>
+                    ) : (
+                      <span className="line-clamp-2">{article.title}</span>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-center text-gray-500 whitespace-nowrap">
                     <div>{time}</div>
@@ -216,9 +227,6 @@ export const IMSPopularArticles = () => {
       </div>
     </div>
 
-    {previewId && (
-      <ArticlePreviewDrawer articleId={previewId} onClose={() => setPreviewId(null)} />
-    )}
   </>
   )
 }

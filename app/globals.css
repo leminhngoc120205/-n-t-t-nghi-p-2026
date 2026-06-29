@@ -76,6 +76,15 @@ input, textarea, select {
   border-radius: 8px;
 }
 
+/* Article public page content */
+.article-content { font-size: 15px; line-height: 1.85; color: #1f2937; }
+.article-content p { margin-bottom: 1.1em; }
+.article-content h2 { font-size: 1.3em; font-weight: 700; margin: 1.6em 0 0.5em; }
+.article-content h3 { font-size: 1.1em; font-weight: 700; margin: 1.4em 0 0.4em; }
+.article-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 1.2em 0; display: block; }
+.article-content video { max-width: 100%; border-radius: 8px; margin: 1.2em 0; }
+.article-content blockquote { border-left: 4px solid #17a2b8; padding: 0.6em 1em; margin: 1em 0; background: #f8fcfd; border-radius: 0 6px 6px 0; font-style: italic; color: #374151; }
+
 @keyframes slideInRight {
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }

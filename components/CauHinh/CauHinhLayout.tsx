@@ -7,9 +7,10 @@ import { IMSSidebar } from '@/components/IMS/IMSSidebar'
 import { IMSTopBar } from '@/components/IMS/IMSTopBar'
 
 const sidebarItems = [
-  { href: '/cau-hinh/dong-su-kien',    label: 'Quản lý dòng sự kiện',     disabled: false },
-  { href: '/cau-hinh/tac-gia',         label: 'Quản lý profile tác giả',  disabled: false },
-  { href: '/cau-hinh/chu-de',          label: 'Quản lý chủ đề',           disabled: false },
+  { href: '/cau-hinh/nguoi-dung',   label: 'Quản lý người dùng',       disabled: false },
+  { href: '/cau-hinh/dong-su-kien', label: 'Quản lý dòng sự kiện',     disabled: false },
+  { href: '/cau-hinh/tac-gia',      label: 'Quản lý profile tác giả',  disabled: false },
+  { href: '/cau-hinh/chu-de',       label: 'Quản lý chủ đề',           disabled: false },
 ]
 
 export default function CauHinhLayout({ children }: { children: React.ReactNode }) {
@@ -21,14 +22,14 @@ export default function CauHinhLayout({ children }: { children: React.ReactNode 
       <div className="ml-14 flex-1 flex flex-col min-h-screen">
         <IMSTopBar />
         <main className="flex-1 flex overflow-hidden">
-          {/* Left sidebar CẤU HÌNH */}
+          {/* Left sidebar QUẢN LÝ */}
           <aside className="w-64 min-w-[256px] bg-white border-r border-gray-200 flex flex-col">
             <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">CẤU HÌNH</h2>
+              <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">QUẢN LÝ</h2>
             </div>
             <nav className="flex-1 py-1">
               {sidebarItems.map((item, idx) => {
-                const isActive = !item.disabled && pathname === item.href
+                const isActive = !item.disabled && pathname?.startsWith(item.href)
                 return (
                   <Link
                     key={idx}

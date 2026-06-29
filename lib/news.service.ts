@@ -1,7 +1,72 @@
 import { Types } from 'mongoose'
 import { connectDB } from '@/lib/mongodb'
-import { Article, ArticleStatus } from '@/models/article'
+import { Article, ArticleStatus, IArticle } from '@/models/article'
 import { writeLog } from '@/lib/log.service'
+
+/* ── Article type rules ── */
+interface TypeRule {
+  minWords: number
+  requireThumbnail: boolean
+  requireSapo: boolean
+  requireCategory: boolean
+  requireVideoUrl?: boolean
+  requireStreamUrl?: boolean
+  requireSteps?: boolean
+  requireQaItems?: boolean
+}
+
+const TYPE_RULES: Record<string, TypeRule> = {
+  size_s:         { minWords: 100,  requireThumbnail: false, requireSapo: false, requireCategory: true },
+  size_m:         { minWords: 300,  requireThumbnail: true,  requireSapo: true,  requireCategory: true },
+  size_l:         { minWords: 800,  requireThumbnail: true,  requireSapo: true,  requireCategory: true },
+  magazine:       { minWords: 1500, requireThumbnail: true,  requireSapo: true,  requireCategory: true },
+  big_story:      { minWords: 1500, requireThumbnail: true,  requireSapo: true,  requireCategory: true },
+  video_autoplay: { minWords: 0,    requireThumbnail: true,  requireSapo: false, requireCategory: true, requireVideoUrl: true },
+  livestream:     { minWords: 0,    requireThumbnail: true,  requireSapo: false, requireCategory: true, requireStreamUrl: true },
+  wiki_how:       { minWords: 0,    requireThumbnail: true,  requireSapo: false, requireCategory: true, requireSteps: true },
+  cooking:        { minWords: 0,    requireThumbnail: true,  requireSapo: false, requireCategory: true },
+  qa:             { minWords: 0,    requireThumbnail: false, requireSapo: false, requireCategory: true, requireQaItems: true },
+}
+
+function countWordsInHtml(html: string): number {
+  const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  return text === '' ? 0 : text.split(' ').filter(Boolean).length
+}
+
+function validateArticleForSubmit(article: IArticle): string[] {
+  const errors: string[] = []
+  const rule = TYPE_RULES[article.articleType] ?? TYPE_RULES['size_m']
+
+  if (rule.minWords > 0) {
+    const wc = countWordsInHtml(article.content ?? '')
+    if (wc < rule.minWords) {
+      errors.push(`Nội dung quá ngắn — cần ít nhất ${rule.minWords} từ, hiện có ${wc} từ.`)
+    }
+  }
+  if (rule.requireThumbnail && !article.thumbnail) {
+    errors.push('Chưa có ảnh đại diện (thumbnail).')
+  }
+  if (rule.requireSapo && !article.sapo?.trim()) {
+    errors.push('Chưa có mô tả (sapo).')
+  }
+  if (rule.requireCategory && !article.categoryId) {
+    errors.push('Chưa chọn chuyên mục.')
+  }
+  if (rule.requireVideoUrl && !article.videoUrl?.trim()) {
+    errors.push('Bài video cần có đường dẫn video (videoUrl).')
+  }
+  if (rule.requireStreamUrl && !article.streamUrl?.trim()) {
+    errors.push('Bài livestream cần có đường dẫn stream (streamUrl).')
+  }
+  if (rule.requireSteps && (!article.steps || article.steps.length < 2)) {
+    errors.push('Bài Wiki-How cần ít nhất 2 bước hướng dẫn.')
+  }
+  if (rule.requireQaItems && (!article.qaItems || article.qaItems.length < 2)) {
+    errors.push('Bài Q&A cần ít nhất 2 cặp hỏi-đáp.')
+  }
+
+  return errors
+}
 
 // transition[fromStatus][toStatus] = allowed roles
 const TRANSITIONS: Record<string, Record<string, string[]>> = {
@@ -44,6 +109,14 @@ export async function transitionStatus(
   const from = article.status as ArticleStatus
   if (!canTransition(from, to, role)) {
     return { ok: false, error: `Không có quyền chuyển trạng thái từ "${from}" sang "${to}".` }
+  }
+
+  // Validate article content rules before submitting for review
+  if (to === 'processing') {
+    const errors = validateArticleForSubmit(article as IArticle)
+    if (errors.length > 0) {
+      return { ok: false, error: errors.join(' ') }
+    }
   }
 
   const update: Record<string, unknown> = { status: to }

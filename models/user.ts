@@ -10,6 +10,8 @@ export interface IUser extends Document {
   telegramId: string
   role: 'admin' | 'editor' | 'reporter'
   departmentId: Types.ObjectId | null
+  isActive: boolean
+  lastLoginAt: Date | null
   createdAt: Date
   updatedAt: Date
 }
@@ -25,6 +27,8 @@ const userSchema = new Schema<IUser>(
     telegramId:   { type: String, default: '', trim: true },
     role:         { type: String, enum: ['admin','editor','reporter'], default: 'reporter' },
     departmentId: { type: Schema.Types.ObjectId, ref: 'IMSDepartment', default: null },
+    isActive:     { type: Boolean, default: true },
+    lastLoginAt:  { type: Date, default: null },
   },
   { timestamps: true, collection: 'ims_users' },
 )

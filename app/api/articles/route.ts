@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     const p = req.nextUrl.searchParams
     const status     = p.get('status')
     const writerId   = p.get('writerId')
+    const editorId   = p.get('editorId')
     const categoryId = p.get('categoryId')
     const search     = p.get('search')
     const page       = Math.max(1, parseInt(p.get('page') ?? '1'))
@@ -23,7 +24,8 @@ export async function GET(req: NextRequest) {
 
     const query: Record<string, unknown> = {}
     if (status)     query.status = status
-    if (writerId   && Types.ObjectId.isValid(writerId))   query.writerId   = writerId
+    if (writerId   && Types.ObjectId.isValid(writerId))   query.writerId   = new Types.ObjectId(writerId)
+    if (editorId   && Types.ObjectId.isValid(editorId))   query.editorId   = new Types.ObjectId(editorId)
     if (categoryId && Types.ObjectId.isValid(categoryId)) query.categoryId = categoryId
     if (search)     query.title = { $regex: search, $options: 'i' }
     if (user.role === 'reporter') query.writerId = new Types.ObjectId(user.userId)
@@ -54,7 +56,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json() as Record<string, unknown>
-    const { title, sapo, content, thumbnail, articleType, categoryId, authorId, tags, topics, source } = body
+    const { title, sapo, content, thumbnail, articleType, categoryId, authorId, tags, topics, source, sourceUrl, publishedAt,
+            videoUrl, streamUrl, scheduledAt, steps, qaItems, ingredients, cookingTime, servings } = body
 
     if (!title || typeof title !== 'string' || !title.trim()) {
       return NextResponse.json({ ok: false, error: 'Tiêu đề không được để trống.' }, { status: 400 })
@@ -76,7 +79,17 @@ export async function POST(req: NextRequest) {
       authorId:    authorId   && Types.ObjectId.isValid(authorId   as string) ? authorId  : null,
       tags:    Array.isArray(tags)   ? (tags   as string[]).filter(t => Types.ObjectId.isValid(t)) : [],
       topics:  Array.isArray(topics) ? (topics as string[]).filter(t => Types.ObjectId.isValid(t)) : [],
-      source: source ?? '',
+      source:      source    ?? '',
+      sourceUrl:   sourceUrl ?? '',
+      publishedAt: publishedAt ? new Date(publishedAt as string) : null,
+      videoUrl:    videoUrl    ?? '',
+      streamUrl:   streamUrl   ?? '',
+      scheduledAt: scheduledAt ? new Date(scheduledAt as string) : null,
+      steps:       Array.isArray(steps)    ? steps    : [],
+      qaItems:     Array.isArray(qaItems)  ? qaItems  : [],
+      ingredients: ingredients ?? '',
+      cookingTime: cookingTime ?? '',
+      servings:    servings    ?? '',
     })
 
     await writeLog({ userId: user.userId, actionType: 'create', objectType: 'article', objectId: article._id.toString(), objectTitle: article.title })

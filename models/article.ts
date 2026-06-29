@@ -23,6 +23,19 @@ export type ArticleType =
   | 'video_autoplay'
   | 'livestream'
   | 'wiki_how'
+  | 'cooking'
+  | 'qa'
+
+export interface IStep {
+  stepTitle: string
+  stepContent: string
+  stepImage: string
+}
+
+export interface IQaItem {
+  question: string
+  answer: string
+}
 
 export interface IArticle extends Document {
   title: string
@@ -40,6 +53,7 @@ export interface IArticle extends Document {
   tags: Types.ObjectId[]
   topics: Types.ObjectId[]
   source: string
+  sourceUrl: string
   notes: string
   showOnHome: boolean
   isFeatured: boolean
@@ -48,6 +62,15 @@ export interface IArticle extends Document {
   publishedAt: Date | null
   createdAt: Date
   updatedAt: Date
+  // Extra fields per article type
+  videoUrl: string
+  streamUrl: string
+  scheduledAt: Date | null
+  steps: IStep[]
+  qaItems: IQaItem[]
+  ingredients: string
+  cookingTime: string
+  servings: string
 }
 
 const articleSchema = new Schema<IArticle>(
@@ -59,7 +82,7 @@ const articleSchema = new Schema<IArticle>(
     thumbnail:   { type: String, default: '' },
     articleType: {
       type: String,
-      enum: ['size_s','size_m','size_l','magazine','big_story','video_autoplay','livestream','wiki_how'],
+      enum: ['size_s','size_m','size_l','magazine','big_story','video_autoplay','livestream','wiki_how','cooking','qa'],
       default: 'size_m',
     },
     status: {
@@ -77,12 +100,28 @@ const articleSchema = new Schema<IArticle>(
     tags:        [{ type: Schema.Types.ObjectId, ref: 'IMSTag' }],
     topics:      [{ type: Schema.Types.ObjectId, ref: 'IMSTopic' }],
     source:      { type: String, default: '' },
+    sourceUrl:   { type: String, default: '' },
     notes:       { type: String, default: '' },
     showOnHome:  { type: Boolean, default: false },
     isFeatured:  { type: Boolean, default: false },
     viewCount:   { type: Number, default: 0 },
     commentCount:{ type: Number, default: 0 },
     publishedAt: { type: Date, default: null },
+    // Extra per-type fields
+    videoUrl:    { type: String, default: '' },
+    streamUrl:   { type: String, default: '' },
+    scheduledAt: { type: Date, default: null },
+    steps: {
+      type: [{ stepTitle: String, stepContent: String, stepImage: String }],
+      default: [],
+    },
+    qaItems: {
+      type: [{ question: String, answer: String }],
+      default: [],
+    },
+    ingredients: { type: String, default: '' },
+    cookingTime: { type: String, default: '' },
+    servings:    { type: String, default: '' },
   },
   { timestamps: true, collection: 'ims_articles' },
 )

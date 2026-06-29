@@ -9,35 +9,15 @@ import { IMSTopBar } from '@/components/IMS/IMSTopBar'
    CẤU HÌNH MENU
 ══════════════════════════════════════════════════════════ */
 const MENUS = [
-  { id: 'log-action',      label: 'Log Action' },
   { id: 'nguoi-dung',      label: 'Quản lý người dùng' },
   { id: 'phong-ban',       label: 'Quản lý phòng ban' },
   { id: 'menu-chuyen-muc', label: 'Quản lý chuyên mục' },
-  { id: 'dong-su-kien',    label: 'Quản lý dòng sự kiện' },
-  { id: 'tro-ly-tin',      label: 'Quản lý người dùng trợ lý tin' },
-  { id: 'profile-tac-gia', label: 'Quản lý profile tác giả' },
-  { id: 'chu-de',          label: 'Quản lý chủ đề' },
-  { id: 'chuyen-gia',      label: 'Quản lý chuyên gia' },
-  { id: 'brand-content',   label: 'Quản lý brand content' },
-  { id: 'so-bao-giay',     label: 'Quản lý số báo giấy' },
-  { id: 'magazine',        label: 'Quản lý mẫu bài Magazine' },
-  { id: 'mp3',             label: 'Quản lý mp3' },
+  { id: 'log-action',      label: 'Log Action' },
 ]
 
 /* ═══════════════════════════════════════════════════════════
    DỮ LIỆU MẪU
 ══════════════════════════════════════════════════════════ */
-const D_DONG_SU_KIEN = [
-  { id:1, img:'🌍', name:'Chiến tranh và hợp tác quân sự Mỹ - Ukraine',   cat:'Thế giới',  count:142, showHome:true,  featured:false },
-  { id:2, img:'☕', name:'Giá cà phê tăng cao toàn cầu',                 cat:'Kinh tế',   count:38,  showHome:true,  featured:true  },
-  { id:3, img:'🤖', name:'Cuộc đua công nghệ AI giữa các cường quốc',     cat:'Công nghệ', count:97,  showHome:false, featured:true  },
-  { id:4, img:'🌊', name:'Biến đổi khí hậu và thiên tai 2026',           cat:'Xã hội',    count:54,  showHome:true,  featured:false },
-  { id:5, img:'⚽', name:'Hành trình đội tuyển Việt Nam AFF Cup 2026',    cat:'Thể thao',  count:213, showHome:true,  featured:true  },
-  { id:6, img:'🏙️', name:'Quy hoạch đô thị Hà Nội 2030',                cat:'Thời sự',   count:67,  showHome:false, featured:false },
-  { id:7, img:'💊', name:'Chính sách y tế và dịch bệnh mới nhất',        cat:'Sức khỏe',  count:44,  showHome:true,  featured:false },
-  { id:8, img:'📈', name:'Thị trường bất động sản phục hồi sau dịch',    cat:'Kinh tế',   count:89,  showHome:false, featured:false },
-  { id:9, img:'🎓', name:'Đổi mới chương trình giáo dục phổ thông',      cat:'Xã hội',    count:31,  showHome:true,  featured:false },
-]
 
 const D_TRO_LY_TIN = [
   { id:1, avatar:'🤖', name:'Trợ lý tin thời sự',     users:8,  desc:'Hỗ trợ biên tập tin tức thời sự nhanh' },
@@ -47,14 +27,6 @@ const D_TRO_LY_TIN = [
   { id:5, avatar:'🌐', name:'Trợ lý dịch thuật',      users:6,  desc:'Dịch tin tức quốc tế sang tiếng Việt' },
 ]
 
-const D_CHU_DE = [
-  { id:1, name:'Xã hội',         articles:1240, order:1,  active:true,  showIcon:true  },
-  { id:2, name:'Xe cộ',          articles:342,  order:5,  active:true,  showIcon:false },
-  { id:3, name:'Chuyên mục AI',  articles:89,   order:3,  active:true,  showIcon:true  },
-  { id:4, name:'Kinh tế số',     articles:567,  order:2,  active:true,  showIcon:true  },
-  { id:5, name:'Bất động sản',   articles:445,  order:4,  active:false, showIcon:false },
-  { id:6, name:'Du lịch',        articles:298,  order:6,  active:true,  showIcon:true  },
-]
 
 const D_CHUYEN_GIA = [
   { id:1, name:'PGS.TS Nguyễn Văn An', role:'Chuyên gia kinh tế vĩ mô', order:1 },
@@ -88,7 +60,7 @@ const D_MAGAZINE = [
 ══════════════════════════════════════════════════════════ */
 export default function QuanLyPage() {
   const router = useRouter()
-  const [active,        setActive]        = useState('log-action')
+  const [active,        setActive]        = useState('nguoi-dung')
   const [sectionLoading,setSectionLoading]= useState(false)
   const [editItem,      setEditItem]      = useState<any>(null)
   const [search,        setSearch]        = useState('')
@@ -111,7 +83,7 @@ export default function QuanLyPage() {
     fetch('/api/auth/me')
       .then(r => r.json())
       .then(d => {
-        if (!d.ok || d.user?.role !== 'admin') router.replace('/dashboard')
+        if (!d.user || d.user?.role !== 'admin') router.replace('/dashboard')
         else setCheckingRole(false)
       })
       .catch(() => router.replace('/dashboard'))
@@ -174,10 +146,10 @@ export default function QuanLyPage() {
                 {active === 'nguoi-dung'      && <SectionNguoiDung showToast={showToast}/>}
                 {active === 'phong-ban'       && <SectionPhongBan  showToast={showToast}/>}
                 {active === 'menu-chuyen-muc' && <SectionMenuChuyenMuc showToast={showToast}/>}
-                {active === 'dong-su-kien'    && <SectionDongSuKien search={search} setSearch={setSearch}/>}
+                {active === 'dong-su-kien'    && <SectionDongSuKien showToast={showToast}/>}
                 {active === 'tro-ly-tin'      && <SectionTroLyTin  search={search} setSearch={setSearch}/>}
                 {active === 'profile-tac-gia' && <SectionTacGia    showToast={showToast}/>}
-                {active === 'chu-de'          && <SectionChuDe     search={search} setSearch={setSearch} onEdit={setEditItem}/>}
+                {active === 'chu-de'          && <SectionChuDe     showToast={showToast}/>}
                 {active === 'chuyen-gia'      && <SectionChuyenGia search={search} setSearch={setSearch} onEdit={setEditItem}/>}
                 {active === 'brand-content'   && <SectionBrandContent search={search} setSearch={setSearch} onEdit={setEditItem}/>}
                 {active === 'so-bao-giay'     && <SectionSoBaoGiay search={search} setSearch={setSearch} onEdit={setEditItem}/>}
@@ -757,34 +729,70 @@ function SectionMenuChuyenMuc({ showToast }: { showToast: (m: string, t: 'ok'|'e
 }
 
 /* ═══════════════════════════════════════════════════════════
-   4. DÒNG SỰ KIỆN
+   4. DÒNG SỰ KIỆN (fetch từ /api/events)
 ══════════════════════════════════════════════════════════ */
-function SectionDongSuKien({ search, setSearch }: any) {
-  const [catFilter, setCatFilter] = useState('')
-  const [data, setData] = useState(D_DONG_SU_KIEN)
+function SectionDongSuKien({ showToast }: { showToast: (m: string, t: 'ok'|'err') => void }) {
+  const [events,   setEvents]   = useState<any[]>([])
+  const [fetching, setFetching] = useState(true)
+  const [search,   setSearch]   = useState('')
+  const [catFilter,setCatFilter]= useState('')
+  const [modal,    setModal]    = useState<'add'|'edit'|null>(null)
+  const [target,   setTarget]   = useState<any>(null)
+  const [confirm,  setConfirm]  = useState<any>(null)
 
-  const filtered = data.filter(d =>
-    (!search || d.name.toLowerCase().includes(search.toLowerCase())) &&
-    (!catFilter || d.cat === catFilter)
+  const load = useCallback(() => {
+    setFetching(true)
+    fetch('/api/events')
+      .then(r => r.json())
+      .then(d => { if (d.ok) setEvents(d.data) })
+      .catch(() => {})
+      .finally(() => setFetching(false))
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const toggle = async (id: string, field: 'showOnHome'|'isFeatured', current: boolean) => {
+    const res = await fetch(`/api/events/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: !current }),
+    })
+    const d = await res.json()
+    if (d.ok) load()
+    else showToast('Lỗi cập nhật', 'err')
+  }
+
+  const handleDelete = async (ev: any) => {
+    const res = await fetch(`/api/events/${ev._id}`, { method: 'DELETE' })
+    const d   = await res.json()
+    if (d.ok) { showToast('Đã vô hiệu hoá dòng sự kiện', 'ok'); load() }
+    else showToast(d.error || 'Lỗi', 'err')
+    setConfirm(null)
+  }
+
+  const cats = [...new Set(events.map((e: any) => e.categoryName).filter(Boolean))]
+  const filtered = events.filter((e: any) =>
+    (!search   || e.name.toLowerCase().includes(search.toLowerCase())) &&
+    (!catFilter || e.categoryName === catFilter)
   )
-
-  const toggle = (id: number, field: 'showHome'|'featured') =>
-    setData(l => l.map(d => d.id === id ? {...d, [field]: !d[field as keyof typeof d]} : d))
+  const COLORS = ['bg-blue-500','bg-teal-500','bg-violet-500','bg-orange-500','bg-rose-500','bg-green-500','bg-amber-500','bg-indigo-500','bg-cyan-500']
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <button className="flex items-center gap-1.5 bg-[#17a2b8] hover:bg-[#138496] text-white text-xs font-bold px-3.5 py-2 rounded transition-colors">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+        <button onClick={() => { setTarget(null); setModal('add') }}
+          className="flex items-center gap-1.5 bg-[#17a2b8] hover:bg-[#138496] text-white text-xs font-bold px-3.5 py-2 rounded transition-colors">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
+          </svg>
           Thêm dòng sự kiện
         </button>
-        <select value={catFilter} onChange={e=>setCatFilter(e.target.value)}
+        <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
           className="px-2.5 py-1.5 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:border-[#17a2b8]">
           <option value="">Tất cả chuyên mục</option>
-          {['Thế giới','Kinh tế','Công nghệ','Xã hội','Thể thao','Thời sự','Sức khỏe'].map(c=><option key={c}>{c}</option>)}
+          {cats.map(c => <option key={c}>{c}</option>)}
         </select>
         <div className="relative ml-auto">
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm kiếm từ khóa..."
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm kiếm từ khóa..."
             className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:border-[#17a2b8] w-48"/>
           <svg className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -792,22 +800,61 @@ function SectionDongSuKien({ search, setSearch }: any) {
         </div>
       </div>
 
-      <DataTable headers={['', 'Tên dòng sự kiện', 'Chuyên mục', 'Bài viết', 'Trang chủ', 'Nổi bật', 'Thao tác']}>
-        {filtered.map(d => (
-          <tr key={d.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-            <td className="px-4 py-3 text-lg">{d.img}</td>
-            <td className="px-4 py-3 font-medium text-gray-800 max-w-xs">
-              <p className="line-clamp-1">{d.name}</p>
-            </td>
-            <td className="px-4 py-3"><span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-semibold">{d.cat}</span></td>
-            <td className="px-4 py-3 text-center font-mono text-gray-600">{d.count}</td>
-            <td className="px-4 py-3 text-center cursor-pointer" onClick={() => toggle(d.id,'showHome')}><CBDisplay checked={d.showHome}/></td>
-            <td className="px-4 py-3 text-center cursor-pointer" onClick={() => toggle(d.id,'featured')}><CBDisplay checked={d.featured}/></td>
-            <td className="px-4 py-3 text-center"><ThreeDot onEdit={() => {}} onDelete={() => {}}/></td>
-          </tr>
-        ))}
-      </DataTable>
-      <PagLabel from={1} to={filtered.length} total={D_DONG_SU_KIEN.length}/>
+      {fetching ? (
+        <div className="bg-white rounded border border-gray-200 p-10 text-center text-gray-400 text-sm">Đang tải...</div>
+      ) : (
+        <DataTable headers={['Avatar', 'Tên dòng sự kiện', 'Chuyên mục', 'Bài viết', 'Trang chủ', 'Nổi bật', 'Thao tác']}>
+          {filtered.map((e: any, i: number) => (
+            <tr key={e._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3"><Av label={e.name} color={COLORS[i % COLORS.length]}/></td>
+              <td className="px-4 py-3 font-medium text-gray-800 max-w-xs">
+                <p className="line-clamp-1">{e.name}</p>
+                {e.description && <p className="text-[10px] text-gray-400 line-clamp-1 mt-0.5">{e.description}</p>}
+              </td>
+              <td className="px-4 py-3">
+                {e.categoryName
+                  ? <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-semibold">{e.categoryName}</span>
+                  : <span className="text-gray-300 text-xs">—</span>}
+              </td>
+              <td className="px-4 py-3 text-center font-mono text-gray-600">{e.articleCount}</td>
+              <td className="px-4 py-3 text-center cursor-pointer" onClick={() => toggle(e._id, 'showOnHome', e.showOnHome)}>
+                <CBDisplay checked={e.showOnHome}/>
+              </td>
+              <td className="px-4 py-3 text-center cursor-pointer" onClick={() => toggle(e._id, 'isFeatured', e.isFeatured)}>
+                <CBDisplay checked={e.isFeatured}/>
+              </td>
+              <td className="px-4 py-3 text-center">
+                <ThreeDot onEdit={() => { setTarget(e); setModal('edit') }} onDelete={() => setConfirm(e)}/>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+      )}
+      <PagLabel from={1} to={filtered.length} total={events.length}/>
+
+      {modal && (
+        <EventModal mode={modal} initial={target}
+          onClose={() => setModal(null)}
+          onSaved={() => { load(); setModal(null) }}
+          showToast={showToast}/>
+      )}
+
+      {confirm && (
+        <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+            <h3 className="font-bold text-gray-800 mb-2">Vô hiệu hoá dòng sự kiện?</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              <strong>{confirm.name}</strong> sẽ bị ẩn khỏi hệ thống.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirm(null)}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">Huỷ</button>
+              <button onClick={() => handleDelete(confirm)}
+                className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold">Vô hiệu hoá</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -934,53 +981,117 @@ function SectionTacGia({ showToast }: { showToast: (m: string, t: 'ok'|'err') =>
 }
 
 /* ═══════════════════════════════════════════════════════════
-   7. CHỦ ĐỀ
+   7. CHỦ ĐỀ (fetch từ /api/topics)
 ══════════════════════════════════════════════════════════ */
-function SectionChuDe({ search, setSearch, onEdit }: any) {
-  const [data, setData] = useState(D_CHU_DE)
-  const filtered = data.filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase()))
-  const toggle = (id:number, field: 'active'|'showIcon') =>
-    setData(l => l.map(d => d.id===id ? {...d,[field]:!d[field as keyof typeof d]} : d))
+function SectionChuDe({ showToast }: { showToast: (m: string, t: 'ok'|'err') => void }) {
+  const [topics,   setTopics]   = useState<any[]>([])
+  const [fetching, setFetching] = useState(true)
+  const [search,   setSearch]   = useState('')
+  const [modal,    setModal]    = useState<'add'|'edit'|null>(null)
+  const [target,   setTarget]   = useState<any>(null)
+  const [confirm,  setConfirm]  = useState<any>(null)
+
+  const load = useCallback(() => {
+    setFetching(true)
+    fetch('/api/topics')
+      .then(r => r.json())
+      .then(d => { if (d.ok) setTopics(d.data) })
+      .catch(() => {})
+      .finally(() => setFetching(false))
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const toggle = async (id: string, field: 'isActive'|'showIcon', current: boolean) => {
+    const res = await fetch(`/api/topics/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: !current }),
+    })
+    const d = await res.json()
+    if (d.ok) load()
+    else showToast('Lỗi cập nhật', 'err')
+  }
+
+  const handleDelete = async (topic: any) => {
+    const res = await fetch(`/api/topics/${topic._id}`, { method: 'DELETE' })
+    const d   = await res.json()
+    if (d.ok) { showToast('Đã vô hiệu hoá chủ đề', 'ok'); load() }
+    else showToast(d.error || 'Lỗi', 'err')
+    setConfirm(null)
+  }
+
+  const filtered = topics.filter(t => !search || t.name.toLowerCase().includes(search.toLowerCase()))
+  const COLORS = ['bg-blue-500','bg-teal-500','bg-violet-500','bg-orange-500','bg-rose-500','bg-green-500']
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <button className="flex items-center gap-1.5 bg-[#17a2b8] hover:bg-[#138496] text-white text-xs font-bold px-3.5 py-2 rounded transition-colors">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+        <button onClick={() => { setTarget(null); setModal('add') }}
+          className="flex items-center gap-1.5 bg-[#17a2b8] hover:bg-[#138496] text-white text-xs font-bold px-3.5 py-2 rounded transition-colors">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
+          </svg>
           Thêm chủ đề mới
         </button>
-        <select className="px-2.5 py-1.5 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:border-[#17a2b8]">
-          <option>Tất cả trạng thái</option><option>Hoạt động</option><option>Ẩn</option>
-        </select>
-        <select className="px-2.5 py-1.5 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:border-[#17a2b8]">
-          <option>Tất cả chuyên mục</option>
-        </select>
         <div className="relative ml-auto">
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm kiếm chủ đề..."
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm kiếm chủ đề..."
             className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-[#17a2b8] w-44"/>
           <svg className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
         </div>
       </div>
-      <DataTable headers={['Avatar','Chủ đề / Bài viết','Thứ tự','Hoạt động','Hiển thị icon','Thao tác']}>
-        {filtered.map((d,i) => (
-          <tr key={d.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-            <td className="px-4 py-3"><Av label={d.name} color={['bg-blue-500','bg-teal-500','bg-violet-500','bg-orange-500','bg-rose-500','bg-green-500'][i%6]}/></td>
-            <td className="px-4 py-3">
-              <p className="font-semibold text-gray-800">{d.name}</p>
-              <p className="text-[10px] text-gray-400">{d.articles.toLocaleString()} bài viết</p>
-            </td>
-            <td className="px-4 py-3 text-center">
-              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-mono">{d.order}</span>
-            </td>
-            <td className="px-4 py-3 text-center cursor-pointer" onClick={() => toggle(d.id,'active')}><CBDisplay checked={d.active}/></td>
-            <td className="px-4 py-3 text-center cursor-pointer" onClick={() => toggle(d.id,'showIcon')}><CBDisplay checked={d.showIcon}/></td>
-            <td className="px-4 py-3 text-center"><ThreeDot onEdit={() => onEdit(d)} onDelete={() => {}}/></td>
-          </tr>
-        ))}
-      </DataTable>
-      <PagLabel from={1} to={filtered.length} total={18}/>
+
+      {fetching ? (
+        <div className="bg-white rounded border border-gray-200 p-10 text-center text-gray-400 text-sm">Đang tải...</div>
+      ) : (
+        <DataTable headers={['Avatar','Tên chủ đề / Slug','Thứ tự','Hoạt động','Hiển thị icon','Thao tác']}>
+          {filtered.map((t: any, i: number) => (
+            <tr key={t._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3"><Av label={t.name} color={COLORS[i % COLORS.length]}/></td>
+              <td className="px-4 py-3">
+                <p className="font-semibold text-gray-800">{t.name}</p>
+                <p className="text-[10px] text-gray-400 font-mono">{t.slug}</p>
+              </td>
+              <td className="px-4 py-3 text-center">
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-mono">{t.displayOrder}</span>
+              </td>
+              <td className="px-4 py-3 text-center cursor-pointer" onClick={() => toggle(t._id, 'isActive', t.isActive)}>
+                <CBDisplay checked={t.isActive}/>
+              </td>
+              <td className="px-4 py-3 text-center cursor-pointer" onClick={() => toggle(t._id, 'showIcon', t.showIcon)}>
+                <CBDisplay checked={t.showIcon}/>
+              </td>
+              <td className="px-4 py-3 text-center">
+                <ThreeDot onEdit={() => { setTarget(t); setModal('edit') }} onDelete={() => setConfirm(t)}/>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+      )}
+      <PagLabel from={1} to={filtered.length} total={topics.length}/>
+
+      {modal && (
+        <TopicModal mode={modal} initial={target}
+          onClose={() => setModal(null)}
+          onSaved={() => { load(); setModal(null) }}
+          showToast={showToast}/>
+      )}
+
+      {confirm && (
+        <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+            <h3 className="font-bold text-gray-800 mb-2">Vô hiệu hoá chủ đề?</h3>
+            <p className="text-sm text-gray-500 mb-5">Chủ đề <strong>{confirm.name}</strong> sẽ bị ẩn khỏi hệ thống.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirm(null)}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">Huỷ</button>
+              <button onClick={() => handleDelete(confirm)}
+                className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold">Vô hiệu hoá</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1126,12 +1237,14 @@ function SectionMagazine({ search, setSearch }: any) {
    QUẢN LÝ NGƯỜI DÙNG (fetch từ /api/users)
 ══════════════════════════════════════════════════════════ */
 function SectionNguoiDung({ showToast }: { showToast: (m: string, t: 'ok'|'err') => void }) {
-  const [users,    setUsers]    = useState<any[]>([])
-  const [fetching, setFetching] = useState(true)
-  const [search,   setSearch]   = useState('')
-  const [modal,    setModal]    = useState<'add'|'edit'|null>(null)
-  const [target,   setTarget]   = useState<any>(null)
-  const [confirm,  setConfirm]  = useState<any>(null)
+  const [users,        setUsers]        = useState<any[]>([])
+  const [fetching,     setFetching]     = useState(true)
+  const [search,       setSearch]       = useState('')
+  const [roleFilter,   setRoleFilter]   = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [modal,        setModal]        = useState<'add'|'edit'|null>(null)
+  const [target,       setTarget]       = useState<any>(null)
+  const [confirm,      setConfirm]      = useState<any>(null)
 
   const load = useCallback(() => {
     setFetching(true)
@@ -1151,6 +1264,18 @@ function SectionNguoiDung({ showToast }: { showToast: (m: string, t: 'ok'|'err')
     setConfirm(null)
   }
 
+  const handleToggleLock = async (u: any) => {
+    const next = !u.isActive
+    const res = await fetch(`/api/users/${u._id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: next }),
+    })
+    const d = await res.json()
+    if (d.ok) { showToast(next ? 'Đã mở khóa tài khoản' : 'Đã khóa tài khoản', 'ok'); load() }
+    else showToast(d.error || 'Lỗi', 'err')
+  }
+
   const roleBadge = (role: string) => {
     const cls: Record<string, string> = {
       admin:    'bg-red-100 text-red-700',
@@ -1158,36 +1283,163 @@ function SectionNguoiDung({ showToast }: { showToast: (m: string, t: 'ok'|'err')
       reporter: 'bg-green-100 text-green-700',
     }
     const lbl: Record<string, string> = {
-      admin: 'Admin', editor: 'Biên tập', reporter: 'Phóng viên',
+      admin: 'Quản trị viên', editor: 'Biên tập viên', reporter: 'Phóng viên',
     }
     return <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${cls[role] || 'bg-gray-100 text-gray-500'}`}>{lbl[role] || role}</span>
   }
 
-  const filtered = users.filter(u =>
-    !search ||
-    u.username?.toLowerCase().includes(search.toLowerCase()) ||
-    u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-    u.email?.toLowerCase().includes(search.toLowerCase())
-  )
+  const fmtLogin = (d: string | null) => {
+    if (!d) return '—'
+    return new Date(d).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
+  const adminCount    = users.filter(u => u.role === 'admin').length
+  const editorCount   = users.filter(u => u.role === 'editor').length
+  const reporterCount = users.filter(u => u.role === 'reporter').length
+
+  const filtered = users.filter(u => {
+    const matchSearch = !search ||
+      u.username?.toLowerCase().includes(search.toLowerCase()) ||
+      u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email?.toLowerCase().includes(search.toLowerCase())
+    const matchRole   = !roleFilter   || u.role === roleFilter
+    const matchStatus = !statusFilter ||
+      (statusFilter === 'active' ? u.isActive !== false : u.isActive === false)
+    return matchSearch && matchRole && matchStatus
+  })
+
   const COLORS = ['bg-blue-500','bg-teal-500','bg-violet-500','bg-orange-500','bg-rose-500','bg-indigo-500']
+
+  const STAT_CARDS = [
+    {
+      role: 'admin',
+      label: 'Quản trị viên',
+      count: adminCount,
+      bg: 'bg-red-50',
+      border: 'border-red-200',
+      countCls: 'text-red-600',
+      labelCls: 'text-red-500',
+      icon: (
+        <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+      ),
+    },
+    {
+      role: 'editor',
+      label: 'Biên tập viên',
+      count: editorCount,
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
+      countCls: 'text-blue-600',
+      labelCls: 'text-blue-500',
+      icon: (
+        <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+      ),
+    },
+    {
+      role: 'reporter',
+      label: 'Phóng viên',
+      count: reporterCount,
+      bg: 'bg-green-50',
+      border: 'border-green-200',
+      countCls: 'text-green-600',
+      labelCls: 'text-green-500',
+      icon: (
+        <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+        </svg>
+      ),
+    },
+  ]
 
   return (
     <div>
-      <Toolbar addLabel="Thêm tài khoản" onAdd={() => { setTarget(null); setModal('add') }} search={search} setSearch={setSearch}/>
+      {/* ── Stat cards ── */}
+      <div className="grid grid-cols-3 gap-4 mb-5">
+        {STAT_CARDS.map(c => (
+          <button key={c.role}
+            onClick={() => setRoleFilter(roleFilter === c.role ? '' : c.role)}
+            className={`flex items-center justify-between px-5 py-4 rounded-xl border transition-all text-left
+              ${roleFilter === c.role
+                ? `${c.bg} ${c.border} ring-2 ring-offset-1 ${c.border.replace('border-','ring-')}`
+                : `bg-white border-gray-200 hover:${c.bg} hover:${c.border}`}`}>
+            <div>
+              <p className={`text-[11px] font-semibold uppercase tracking-widest mb-1 ${roleFilter === c.role ? c.labelCls : 'text-gray-400'}`}>
+                {c.label}
+              </p>
+              <p className={`text-3xl font-bold ${roleFilter === c.role ? c.countCls : 'text-gray-700'}`}>
+                {fetching ? '—' : c.count}
+              </p>
+            </div>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${c.bg} border ${c.border}`}>
+              {c.icon}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Toolbar ── */}
+      <Toolbar addLabel="Thêm tài khoản" onAdd={() => { setTarget(null); setModal('add') }} search={search} setSearch={setSearch}>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          className="px-2.5 py-1.5 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:border-[#17a2b8]">
+          <option value="">Tất cả trạng thái</option>
+          <option value="active">Hoạt động</option>
+          <option value="locked">Đã khóa</option>
+        </select>
+        {(roleFilter || statusFilter) && (
+          <button onClick={() => { setRoleFilter(''); setStatusFilter('') }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 text-gray-500 whitespace-nowrap">
+            Xóa lọc <span className="font-bold">×</span>
+          </button>
+        )}
+      </Toolbar>
+
+      {/* ── Kết quả ── */}
+      <p className="text-[11px] text-gray-400 mb-2">{filtered.length} kết quả</p>
 
       {fetching ? (
         <div className="bg-white rounded border border-gray-200 p-10 text-center text-gray-400 text-sm">Đang tải...</div>
       ) : (
-        <DataTable headers={['Avatar', 'Tài khoản', 'Họ và tên', 'Email', 'Vai trò', 'Thao tác']}>
+        <DataTable headers={['Avatar', 'Tài khoản', 'Email', 'Vai trò', 'Bài viết', 'Đăng nhập gần đây', 'Trạng thái', 'Thao tác']}>
           {filtered.map((u: any, i: number) => (
-            <tr key={u._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3"><Av label={u.fullName || u.username} color={COLORS[i % COLORS.length]}/></td>
-              <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-800">{u.username}</td>
-              <td className="px-4 py-3 text-gray-700">{u.fullName}</td>
+            <tr key={u._id} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${u.isActive === false ? 'opacity-60' : ''}`}>
+              <td className="px-4 py-3">
+                <Av label={u.fullName || u.username} color={u.isActive === false ? 'bg-gray-400' : COLORS[i % COLORS.length]}/>
+              </td>
+              <td className="px-4 py-3">
+                <p className="font-mono text-xs font-semibold text-gray-800">{u.username}</p>
+                <p className="text-[11px] text-gray-400">{u.fullName}</p>
+              </td>
               <td className="px-4 py-3 text-gray-400 text-xs">{u.email || '—'}</td>
               <td className="px-4 py-3">{roleBadge(u.role)}</td>
               <td className="px-4 py-3 text-center">
-                <ThreeDot onEdit={() => { setTarget(u); setModal('edit') }} onDelete={() => setConfirm(u)}/>
+                <span className="font-mono text-xs font-semibold text-gray-700">{u.articleCount ?? 0}</span>
+              </td>
+              <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtLogin(u.lastLoginAt)}</td>
+              <td className="px-4 py-3">
+                {u.isActive === false
+                  ? <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gray-100 text-gray-500">Đã khóa</span>
+                  : <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-100 text-green-700">● Hoạt động</span>
+                }
+              </td>
+              <td className="px-4 py-3 text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <button
+                    onClick={() => handleToggleLock(u)}
+                    title={u.isActive === false ? 'Mở khóa' : 'Khóa tài khoản'}
+                    className={`p-1.5 rounded transition-colors ${u.isActive === false
+                      ? 'text-green-600 hover:bg-green-50'
+                      : 'text-orange-500 hover:bg-orange-50'}`}>
+                    {u.isActive === false
+                      ? <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+                      : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zM10 11V7a2 2 0 114 0v4"/></svg>
+                    }
+                  </button>
+                  <ThreeDot onEdit={() => { setTarget(u); setModal('edit') }} onDelete={() => setConfirm(u)}/>
+                </div>
               </td>
             </tr>
           ))}
@@ -1631,6 +1883,219 @@ function AuthorModal({ mode, initial, onClose, onSaved, showToast }: {
             <input value={avatar} onChange={e => setAvatar(e.target.value)}
               className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
               placeholder="https://..."/>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-200 bg-gray-50">
+          <button onClick={onClose}
+            className="px-5 py-2 text-sm font-bold border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">ĐÓNG</button>
+          <button onClick={handleSubmit} disabled={saving || !name.trim() || !slug.trim()}
+            className="px-5 py-2 text-sm font-bold bg-[#17a2b8] text-white rounded-lg hover:bg-[#138496] disabled:opacity-50 transition-colors">
+            {saving ? 'Đang lưu...' : 'LƯU'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EVENT MODAL
+══════════════════════════════════════════════════════════ */
+function EventModal({ mode, initial, onClose, onSaved, showToast }: {
+  mode: 'add'|'edit'; initial: any; onClose: () => void; onSaved: () => void
+  showToast: (m: string, t: 'ok'|'err') => void
+}) {
+  const toSlug = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+  const [name,         setName]         = useState(initial?.name         || '')
+  const [slug,         setSlug]         = useState(initial?.slug         || '')
+  const [description,  setDescription]  = useState(initial?.description  || '')
+  const [categoryName, setCategoryName] = useState(initial?.categoryName || '')
+  const [articleCount, setArticleCount] = useState<number>(initial?.articleCount ?? 0)
+  const [displayOrder, setDisplayOrder] = useState<number>(initial?.displayOrder ?? 0)
+  const [showOnHome,   setShowOnHome]   = useState<boolean>(initial?.showOnHome  ?? false)
+  const [isFeatured,   setIsFeatured]   = useState<boolean>(initial?.isFeatured  ?? false)
+  const [slugEdited,   setSlugEdited]   = useState(false)
+  const [saving,       setSaving]       = useState(false)
+
+  const [cats, setCats] = useState<any[]>([])
+  useEffect(() => {
+    fetch('/api/categories').then(r => r.json()).then(d => { if (d.ok) setCats(d.data) }).catch(() => {})
+  }, [])
+
+  const handleName = (v: string) => { setName(v); if (!slugEdited) setSlug(toSlug(v)) }
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !slug.trim()) { showToast('Tên và slug không được để trống', 'err'); return }
+    setSaving(true)
+    try {
+      const selectedCat = cats.find((c: any) => c._id === categoryName || c.name === categoryName)
+      const url = mode === 'edit' ? `/api/events/${initial._id}` : '/api/events'
+      const res = await fetch(url, {
+        method: mode === 'edit' ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(), slug: slug.trim(),
+          description: description.trim(),
+          categoryId: selectedCat?._id || null,
+          categoryName: selectedCat?.name || categoryName,
+          articleCount, displayOrder, showOnHome, isFeatured,
+        }),
+      })
+      const d = await res.json()
+      if (d.ok) { showToast(mode === 'edit' ? 'Đã cập nhật dòng sự kiện' : 'Đã tạo dòng sự kiện mới', 'ok'); onSaved() }
+      else showToast(d.error || 'Lỗi', 'err')
+    } catch { showToast('Lỗi kết nối', 'err') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-sm font-bold text-gray-800">{mode === 'edit' ? 'Chỉnh sửa dòng sự kiện' : 'Thêm dòng sự kiện mới'}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded text-gray-500 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tên dòng sự kiện <span className="text-red-500">*</span></label>
+            <input value={name} onChange={e => handleName(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder="VD: Xung đột Trung Đông 2026"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Slug <span className="text-red-500">*</span></label>
+            <input value={slug} onChange={e => { setSlug(e.target.value); setSlugEdited(true) }}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8] font-mono"
+              placeholder="xung-dot-trung-dong-2026"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Mô tả ngắn</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-[#17a2b8]"
+              placeholder="Tóm tắt ngắn về dòng sự kiện này..."/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Chuyên mục</label>
+            <select value={categoryName} onChange={e => setCategoryName(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8] bg-white">
+              <option value="">— Không chọn —</option>
+              {cats.map((c: any) => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Số bài viết</label>
+              <input type="number" min={0} value={articleCount} onChange={e => setArticleCount(+e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"/>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Thứ tự hiển thị</label>
+              <input type="number" value={displayOrder} onChange={e => setDisplayOrder(+e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"/>
+            </div>
+          </div>
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={showOnHome} onChange={e => setShowOnHome(e.target.checked)} className="w-4 h-4 accent-[#17a2b8]"/>
+              <span className="text-xs font-semibold text-gray-600">Hiển thị trang chủ</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={isFeatured} onChange={e => setIsFeatured(e.target.checked)} className="w-4 h-4 accent-[#17a2b8]"/>
+              <span className="text-xs font-semibold text-gray-600">Nổi bật</span>
+            </label>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-200 bg-gray-50">
+          <button onClick={onClose}
+            className="px-5 py-2 text-sm font-bold border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">ĐÓNG</button>
+          <button onClick={handleSubmit} disabled={saving || !name.trim() || !slug.trim()}
+            className="px-5 py-2 text-sm font-bold bg-[#17a2b8] text-white rounded-lg hover:bg-[#138496] disabled:opacity-50 transition-colors">
+            {saving ? 'Đang lưu...' : 'LƯU'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOPIC MODAL
+══════════════════════════════════════════════════════════ */
+function TopicModal({ mode, initial, onClose, onSaved, showToast }: {
+  mode: 'add'|'edit'; initial: any; onClose: () => void; onSaved: () => void
+  showToast: (m: string, t: 'ok'|'err') => void
+}) {
+  const toSlug = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+  const [name,         setName]         = useState(initial?.name         || '')
+  const [slug,         setSlug]         = useState(initial?.slug         || '')
+  const [description,  setDescription]  = useState(initial?.description  || '')
+  const [displayOrder, setDisplayOrder] = useState<number>(initial?.displayOrder ?? 0)
+  const [showIcon,     setShowIcon]     = useState<boolean>(initial?.showIcon ?? false)
+  const [slugEdited,   setSlugEdited]   = useState(false)
+  const [saving,       setSaving]       = useState(false)
+
+  const handleName = (v: string) => { setName(v); if (!slugEdited) setSlug(toSlug(v)) }
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !slug.trim()) { showToast('Tên và slug không được để trống', 'err'); return }
+    setSaving(true)
+    try {
+      const url = mode === 'edit' ? `/api/topics/${initial._id}` : '/api/topics'
+      const res = await fetch(url, {
+        method: mode === 'edit' ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), slug: slug.trim(), description: description.trim(), displayOrder, showIcon }),
+      })
+      const d = await res.json()
+      if (d.ok) { showToast(mode === 'edit' ? 'Đã cập nhật chủ đề' : 'Đã tạo chủ đề mới', 'ok'); onSaved() }
+      else showToast(d.error || 'Lỗi', 'err')
+    } catch { showToast('Lỗi kết nối', 'err') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-sm font-bold text-gray-800">{mode === 'edit' ? 'Chỉnh sửa chủ đề' : 'Thêm chủ đề mới'}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded text-gray-500 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tên chủ đề <span className="text-red-500">*</span></label>
+            <input value={name} onChange={e => handleName(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"
+              placeholder="Ví dụ: Công nghệ AI"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Slug <span className="text-red-500">*</span></label>
+            <input value={slug} onChange={e => { setSlug(e.target.value); setSlugEdited(true) }}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8] font-mono"
+              placeholder="cong-nghe-ai"/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Mô tả</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-[#17a2b8]"
+              placeholder="Nhập mô tả ngắn về chủ đề..."/>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Thứ tự hiển thị</label>
+            <input type="number" value={displayOrder} onChange={e => setDisplayOrder(+e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#17a2b8]"/>
+          </div>
+          <div className="flex items-center gap-3">
+            <input type="checkbox" id="showIcon" checked={showIcon} onChange={e => setShowIcon(e.target.checked)}
+              className="w-4 h-4 accent-[#17a2b8]"/>
+            <label htmlFor="showIcon" className="text-xs font-semibold text-gray-600 cursor-pointer">Hiển thị icon chủ đề</label>
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-200 bg-gray-50">

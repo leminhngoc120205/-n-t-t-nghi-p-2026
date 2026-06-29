@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyPassword, createToken, buildCookieHeader } from '@/lib/auth'
-import { findByUsername, toPublic, seedUsersIfEmpty } from '@/lib/users'
+import { findByUsername, toPublic, seedUsersIfEmpty, touchLastLogin } from '@/lib/users'
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,6 +21,12 @@ export async function POST(request: NextRequest) {
     if (!verifyPassword(password, user.passwordHash)) {
       return NextResponse.json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng.' }, { status: 401 })
     }
+
+    if (user.isActive === false) {
+      return NextResponse.json({ error: 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.' }, { status: 403 })
+    }
+
+    void touchLastLogin((user._id as { toString(): string }).toString())
 
     const publicUser = toPublic(user)
     const token = createToken(

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Types } from 'mongoose'
 import { connectDB } from '@/lib/mongodb'
 import { User } from '@/models/user'
+import { Article } from '@/models/article'
 import { getRequestUser } from '@/lib/api-auth'
 import { hashPassword } from '@/lib/auth'
 import { writeLog } from '@/lib/log.service'
@@ -11,8 +13,24 @@ export async function GET(req: NextRequest) {
   if (user.role !== 'admin') return NextResponse.json({ ok: false, error: 'Chỉ admin mới có quyền.' }, { status: 403 })
 
   await connectDB()
-  const items = await User.find().select('-passwordHash').sort({ createdAt: -1 }).lean()
-  return NextResponse.json({ ok: true, data: items })
+
+  const [users, articleCounts] = await Promise.all([
+    User.find().select('-passwordHash').sort({ createdAt: -1 }).lean(),
+    Article.aggregate([{ $group: { _id: '$writerId', count: { $sum: 1 } } }]),
+  ])
+
+  const countMap = new Map<string, number>(
+    (articleCounts as { _id: Types.ObjectId | null; count: number }[]).map(r => [
+      r._id?.toString() ?? '', r.count,
+    ])
+  )
+
+  const data = users.map(u => ({
+    ...u,
+    articleCount: countMap.get((u._id as Types.ObjectId).toString()) ?? 0,
+  }))
+
+  return NextResponse.json({ ok: true, data })
 }
 
 export async function POST(req: NextRequest) {

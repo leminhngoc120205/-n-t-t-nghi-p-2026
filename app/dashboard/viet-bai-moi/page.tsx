@@ -6,9 +6,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 
 /* ─── Types ─── */
 type Device = 'desktop' | 'tablet' | 'mobile'
-type RightPanel = 'info' | 'author' | 'comment' | 'settings' | 'seo' | 'ai' | null
 
-interface ApiCategory { _id: string; name: string; slug: string }
+interface ApiCategory { _id: string; name: string; slug: string; parentId?: string | null }
 interface Toast { msg: string; type: 'ok' | 'err' }
 
 const articleTypeLabels: Record<string, string> = {
@@ -21,6 +20,24 @@ const urlTypeToModel: Record<string, string> = {
   'size-s': 'size_s', 'size-m': 'size_m', 'size-l': 'size_l',
   'big-story': 'big_story', 'auto-video': 'video_autoplay',
   'wiki-how': 'wiki_how', 'magazine': 'magazine', 'livestream': 'livestream',
+  'cooking': 'cooking', 'qa': 'qa',
+}
+
+// Mirrors TYPE_RULES from lib/news.service.ts — used for client-side checklist display
+const CLIENT_TYPE_RULES: Record<string, {
+  minWords: number; requireThumbnail: boolean; requireSapo: boolean; requireCategory: boolean
+  requireVideoUrl?: boolean; requireStreamUrl?: boolean; requireSteps?: boolean; requireQaItems?: boolean
+}> = {
+  size_s:         { minWords: 100,  requireThumbnail: false, requireSapo: false, requireCategory: true },
+  size_m:         { minWords: 300,  requireThumbnail: true,  requireSapo: true,  requireCategory: true },
+  size_l:         { minWords: 800,  requireThumbnail: true,  requireSapo: true,  requireCategory: true },
+  magazine:       { minWords: 1500, requireThumbnail: true,  requireSapo: true,  requireCategory: true },
+  big_story:      { minWords: 1500, requireThumbnail: true,  requireSapo: true,  requireCategory: true },
+  video_autoplay: { minWords: 0,    requireThumbnail: true,  requireSapo: false, requireCategory: true, requireVideoUrl: true },
+  livestream:     { minWords: 0,    requireThumbnail: true,  requireSapo: false, requireCategory: true, requireStreamUrl: true },
+  wiki_how:       { minWords: 0,    requireThumbnail: true,  requireSapo: false, requireCategory: true, requireSteps: true },
+  cooking:        { minWords: 0,    requireThumbnail: true,  requireSapo: false, requireCategory: true },
+  qa:             { minWords: 0,    requireThumbnail: false, requireSapo: false, requireCategory: true, requireQaItems: true },
 }
 
 const categorySubs: Record<string, string[]> = {
@@ -32,14 +49,6 @@ const categorySubs: Record<string, string[]> = {
   'giai-tri': ['Phim ảnh', 'Âm nhạc', 'Nghệ sĩ'],
   'suc-khoe': ['Dinh dưỡng', 'Bệnh lý', 'Làm đẹp'],
 }
-
-const aiNewsItems = [
-  { source: 'Daily Mail', title: 'Apple announces major iPhone redesign for 2027', time: '2 phút trước' },
-  { source: 'BBC News', title: 'Global temperatures hit record highs in May 2026', time: '5 phút trước' },
-  { source: 'Reuters', title: 'Samsung reveals Galaxy Z Fold 9 with AI features', time: '12 phút trước' },
-  { source: 'CNN', title: 'Tesla cybertruck faces recall over software issues', time: '20 phút trước' },
-  { source: 'TechCrunch', title: 'OpenAI launches GPT-5 with multimodal capabilities', time: '35 phút trước' },
-]
 
 const countWords = (text: string) => text.trim() === '' ? 0 : text.trim().split(/\s+/).length
 
@@ -60,7 +69,6 @@ function VietBaiMoiContent() {
   const editId      = searchParams.get('id')            // null = viết mới, có giá trị = đang sửa
 
   const [device,          setDevice]          = useState<Device>('desktop')
-  const [rightPanel,      setRightPanel]      = useState<RightPanel>(null)
   const [title,           setTitle]           = useState('')
   const [sapo,            setSapo]            = useState('')
   const [content,         setContent]         = useState('')
@@ -68,11 +76,22 @@ function VietBaiMoiContent() {
   const [selectedCatSlug, setSelectedCatSlug] = useState<string | null>(null)
   const [apiCategories,   setApiCategories]   = useState<ApiCategory[]>([])
   const [thumbnail,       setThumbnail]       = useState('')
+  const [publishDate,     setPublishDate]     = useState('')
+  const [sourceUrl,       setSourceUrl]       = useState('')
   const [uploadingImg,    setUploadingImg]    = useState(false)
   const [saving,          setSaving]          = useState(false)
   const [loadingEdit,     setLoadingEdit]     = useState(!!editId)
   const [toast,           setToast]           = useState<Toast | null>(null)
   const [showPreviewAlert, setShowPreviewAlert] = useState(false)
+  // Extra per-type fields
+  const [videoUrl,        setVideoUrl]        = useState('')
+  const [streamUrl,       setStreamUrl]       = useState('')
+  const [scheduledAt,     setScheduledAt]     = useState('')
+  const [steps,           setSteps]           = useState<{title:string;content:string;image:string}[]>([])
+  const [qaItems,         setQaItems]         = useState<{question:string;answer:string}[]>([])
+  const [ingredients,     setIngredients]     = useState('')
+  const [cookingTime,     setCookingTime]     = useState('')
+  const [servings,        setServings]        = useState('')
 
   // Fetch danh sách chuyên mục từ API
   useEffect(() => {
@@ -97,6 +116,16 @@ function VietBaiMoiContent() {
         // categoryId đã được populate → có trường slug để map sang selectedCatSlug
         if (a.categoryId?.slug) setSelectedCatSlug(a.categoryId.slug)
         if (a.thumbnail)        setThumbnail(a.thumbnail)
+        if (a.publishedAt)      setPublishDate(new Date(a.publishedAt).toISOString().slice(0, 16))
+        if (a.sourceUrl)        setSourceUrl(a.sourceUrl)
+        if (a.videoUrl)         setVideoUrl(a.videoUrl)
+        if (a.streamUrl)        setStreamUrl(a.streamUrl)
+        if (a.scheduledAt)      setScheduledAt(new Date(a.scheduledAt).toISOString().slice(0, 16))
+        if (a.steps?.length)    setSteps(a.steps.map((s: {stepTitle:string;stepContent:string;stepImage:string}) => ({ title: s.stepTitle, content: s.stepContent, image: s.stepImage })))
+        if (a.qaItems?.length)  setQaItems(a.qaItems)
+        if (a.ingredients)      setIngredients(a.ingredients)
+        if (a.cookingTime)      setCookingTime(a.cookingTime)
+        if (a.servings)         setServings(a.servings)
       })
       .catch(() => {})
       .finally(() => setLoadingEdit(false))
@@ -124,9 +153,6 @@ function VietBaiMoiContent() {
     }
   }
 
-  const togglePanel = (panel: RightPanel) =>
-    setRightPanel((prev) => (prev === panel ? null : panel))
-
   const toggleCatExpand = (slug: string) =>
     setExpandedCats((prev) => prev.includes(slug) ? prev.filter(x => x !== slug) : [...prev, slug])
 
@@ -147,6 +173,16 @@ function VietBaiMoiContent() {
       articleType: urlTypeToModel[articleType] ?? 'size_m',
       categoryId: catId,
       source: '',
+      sourceUrl: sourceUrl || undefined,
+      publishedAt: publishDate || undefined,
+      videoUrl:    videoUrl    || undefined,
+      streamUrl:   streamUrl   || undefined,
+      scheduledAt: scheduledAt || undefined,
+      steps:       steps.length > 0 ? steps.map(s => ({ stepTitle: s.title, stepContent: s.content, stepImage: s.image })) : undefined,
+      qaItems:     qaItems.length > 0 ? qaItems : undefined,
+      ingredients: ingredients || undefined,
+      cookingTime: cookingTime || undefined,
+      servings:    servings    || undefined,
     })
     try {
       let res: Response
@@ -255,18 +291,28 @@ function VietBaiMoiContent() {
           onContentChange={setContent}
         />
 
-        <RightPanelIcons activePanel={rightPanel} onToggle={togglePanel} />
-
-        {rightPanel && (
-          <RightPanelContent
-            panel={rightPanel}
-            thumbnail={thumbnail}
-            uploadingImg={uploadingImg}
-            onImageUpload={handleImageUpload}
-            onClearThumbnail={() => setThumbnail('')}
-            onClose={() => setRightPanel(null)}
-          />
-        )}
+        <InfoPanel
+          articleType={urlTypeToModel[articleType] ?? 'size_m'}
+          content={content}
+          sapo={sapo}
+          selectedCatSlug={selectedCatSlug}
+          thumbnail={thumbnail}
+          uploadingImg={uploadingImg}
+          onImageUpload={handleImageUpload}
+          onClearThumbnail={() => setThumbnail('')}
+          publishDate={publishDate}
+          onPublishDateChange={setPublishDate}
+          sourceUrl={sourceUrl}
+          onSourceUrlChange={setSourceUrl}
+          videoUrl={videoUrl}         onVideoUrlChange={setVideoUrl}
+          streamUrl={streamUrl}       onStreamUrlChange={setStreamUrl}
+          scheduledAt={scheduledAt}   onScheduledAtChange={setScheduledAt}
+          steps={steps}               onStepsChange={setSteps}
+          qaItems={qaItems}           onQaItemsChange={setQaItems}
+          ingredients={ingredients}   onIngredientsChange={setIngredients}
+          cookingTime={cookingTime}   onCookingTimeChange={setCookingTime}
+          servings={servings}         onServingsChange={setServings}
+        />
       </div>
 
       {/* Preview alert */}
@@ -346,22 +392,6 @@ function EditorTopBar({
         </span>
       )}
 
-      {/* Insert toolbar */}
-      <div className="flex items-center gap-1 ml-2 border-l border-gray-200 pl-3">
-        {[
-          { icon: <ImgIcon />, label: 'Ảnh' },
-          { icon: <VideoIcon />, label: 'Video' },
-          { icon: <AudioIcon />, label: 'Audio' },
-          { icon: <QuoteIcon />, label: 'Trích dẫn' },
-          { icon: <TableIcon />, label: 'Bảng' },
-          { icon: <HtmlIcon />, label: 'HTML' },
-          { icon: <EmbedIcon />, label: 'Nhúng' },
-        ].map(({ icon, label }) => (
-          <button key={label} title={label} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors">
-            {icon}
-          </button>
-        ))}
-      </div>
 
       <div className="flex-1" />
 
@@ -425,17 +455,20 @@ function LeftPanel({
   onToggleExpand: (slug: string) => void
   onSelectCat: (slug: string | null) => void
 }) {
-  const displayCats = apiCategories.length > 0
-    ? apiCategories
-    : [
-        { _id: '', slug: 'thoi-su',   name: 'Thời Sự' },
-        { _id: '', slug: 'kinh-te',   name: 'Kinh Tế' },
-        { _id: '', slug: 'xa-hoi',    name: 'Xã Hội' },
-        { _id: '', slug: 'cong-nghe', name: 'Công Nghệ' },
-        { _id: '', slug: 'the-thao',  name: 'Thể Thao' },
-        { _id: '', slug: 'giai-tri',  name: 'Giải Trí' },
-        { _id: '', slug: 'suc-khoe',  name: 'Sức Khỏe' },
-      ]
+  const fallback: ApiCategory[] = [
+    { _id: '1', slug: 'thoi-su',   name: 'Thời Sự',   parentId: null },
+    { _id: '2', slug: 'kinh-te',   name: 'Kinh Tế',   parentId: null },
+    { _id: '3', slug: 'xa-hoi',    name: 'Xã Hội',    parentId: null },
+    { _id: '4', slug: 'cong-nghe', name: 'Công Nghệ', parentId: null },
+    { _id: '5', slug: 'the-thao',  name: 'Thể Thao',  parentId: null },
+    { _id: '6', slug: 'giai-tri',  name: 'Giải Trí',  parentId: null },
+    { _id: '7', slug: 'suc-khoe',  name: 'Sức Khỏe',  parentId: null },
+  ]
+
+  const allCats  = apiCategories.length > 0 ? apiCategories : fallback
+  const parents  = allCats.filter(c => !c.parentId)
+  const children = (parentId: string) => allCats.filter(c => c.parentId === parentId)
+  const allNames = Object.fromEntries(allCats.map(c => [c.slug, c.name]))
 
   return (
     <aside className="w-56 bg-white border-r border-gray-200 flex flex-col overflow-hidden flex-shrink-0">
@@ -446,27 +479,32 @@ function LeftPanel({
           </span>
         </div>
         <div className="py-1">
-          {displayCats.map((cat) => {
+          {parents.map((cat) => {
             const isExpanded = expandedCats.includes(cat.slug)
             const isSelected = selectedCatSlug === cat.slug
-            const subs = categorySubs[cat.slug] ?? []
+            const subs = children(cat._id)
+            const subSelected = subs.some(s => s.slug === selectedCatSlug)
             return (
               <div key={cat.slug}>
-                <div className={`flex items-center px-3 py-2 transition-colors group ${isSelected ? 'bg-[#17a2b8]/10' : 'hover:bg-gray-50'}`}>
-                  {/* Expand arrow */}
+                <div className={`flex items-center px-3 py-2 transition-colors group ${
+                  isSelected ? 'bg-[#17a2b8]/10' : subSelected ? 'bg-[#17a2b8]/5' : 'hover:bg-gray-50'
+                }`}>
+                  {/* Expand arrow — only show if has children */}
                   <button
                     onClick={() => onToggleExpand(cat.slug)}
-                    className="mr-1.5 flex-shrink-0"
+                    className="mr-1.5 flex-shrink-0 w-4"
                   >
-                    <svg
-                      className={`w-3 h-3 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                    {subs.length > 0 && (
+                      <svg
+                        className={`w-3 h-3 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    )}
                   </button>
 
-                  {/* Category name — clicking selects it */}
+                  {/* Parent category name */}
                   <button
                     onClick={() => onSelectCat(isSelected ? null : cat.slug)}
                     className={`flex-1 text-left text-xs font-semibold transition-colors ${
@@ -485,17 +523,27 @@ function LeftPanel({
 
                 {isExpanded && subs.length > 0 && (
                   <div className="ml-5 border-l border-gray-100">
-                    {subs.map((sub) => (
-                      <button
-                        key={sub}
-                        onClick={() => onSelectCat(cat.slug)}
-                        className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
-                          isSelected ? 'text-[#17a2b8]' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {sub}
-                      </button>
-                    ))}
+                    {subs.map((sub) => {
+                      const isSubSelected = selectedCatSlug === sub.slug
+                      return (
+                        <button
+                          key={sub.slug}
+                          onClick={() => onSelectCat(isSubSelected ? null : sub.slug)}
+                          className={`w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center justify-between ${
+                            isSubSelected
+                              ? 'text-[#17a2b8] bg-[#17a2b8]/10 font-medium'
+                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {sub.name}
+                          {isSubSelected && (
+                            <svg className="w-3 h-3 text-[#17a2b8] flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -506,7 +554,7 @@ function LeftPanel({
         {selectedCatSlug && (
           <div className="px-3 pb-3">
             <div className="text-[10px] text-[#17a2b8] bg-[#17a2b8]/10 rounded-lg px-2 py-1.5 text-center font-medium">
-              Đã chọn: {displayCats.find(c => c.slug === selectedCatSlug)?.name}
+              Đã chọn: {allNames[selectedCatSlug] ?? selectedCatSlug}
             </div>
           </div>
         )}
@@ -548,7 +596,109 @@ function CenterEditor({ device, title, sapo, content, titleWords, sapoWords, onT
   onSapoChange: (v: string) => void
   onContentChange: (v: string) => void
 }) {
-  const widthClass = device === 'desktop' ? 'max-w-3xl' : device === 'tablet' ? 'max-w-xl' : 'max-w-sm'
+  const widthClass        = device === 'desktop' ? 'max-w-3xl' : device === 'tablet' ? 'max-w-xl' : 'max-w-sm'
+  const imgInputRef       = useRef<HTMLInputElement>(null)
+  const videoInputRef     = useRef<HTMLInputElement>(null)
+  const contentDivRef     = useRef<HTMLDivElement>(null)
+  const lastSyncedContent = useRef('')
+  const [uploadingInline, setUploadingInline] = useState(false)
+  const [uploadingVideo,  setUploadingVideo]  = useState(false)
+
+  // Sync nội dung từ ngoài vào div (vd: tải bài sửa)
+  useEffect(() => {
+    const div = contentDivRef.current
+    if (!div) return
+    if (content !== lastSyncedContent.current) {
+      div.innerHTML = content
+      lastSyncedContent.current = content
+    }
+  }, [content])
+
+  const insertImageAtCursor = (url: string) => {
+    const div = contentDivRef.current
+    if (!div) return
+    div.focus()
+    const img = document.createElement('img')
+    img.src = url
+    img.alt = 'Ảnh'
+    img.style.cssText = 'max-width:100%;height:auto;border-radius:6px;margin:10px 0;display:block;'
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0)
+      range.deleteContents()
+      range.insertNode(img)
+      const after = document.createRange()
+      after.setStartAfter(img)
+      after.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(after)
+    } else {
+      div.appendChild(img)
+    }
+    const newHtml = div.innerHTML
+    lastSyncedContent.current = newHtml
+    onContentChange(newHtml)
+  }
+
+  const handleInlineImageUpload = async (file: File) => {
+    setUploadingInline(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res  = await fetch('/api/media/upload', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!data.ok) { alert(data.error || 'Lỗi khi tải ảnh lên'); return }
+      insertImageAtCursor(data.data.url)
+    } catch {
+      alert('Lỗi kết nối khi tải ảnh')
+    } finally {
+      setUploadingInline(false)
+    }
+  }
+
+  const insertVideoAtCursor = (url: string) => {
+    const div = contentDivRef.current
+    if (!div) return
+    div.focus()
+    const video = document.createElement('video')
+    video.src = url
+    video.controls = true
+    video.style.cssText = 'max-width:100%;border-radius:6px;margin:10px 0;display:block;'
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0)
+      range.deleteContents()
+      range.insertNode(video)
+      const after = document.createRange()
+      after.setStartAfter(video)
+      after.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(after)
+    } else {
+      div.appendChild(video)
+    }
+    const newHtml = div.innerHTML
+    lastSyncedContent.current = newHtml
+    onContentChange(newHtml)
+  }
+
+  const handleVideoUpload = async (file: File) => {
+    setUploadingVideo(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res  = await fetch('/api/media/upload', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!data.ok) { alert(data.error || 'Lỗi khi tải video lên'); return }
+      insertVideoAtCursor(data.data.url)
+    } catch {
+      alert('Lỗi kết nối khi tải video')
+    } finally {
+      setUploadingVideo(false)
+    }
+  }
+
+  const isEmpty = !content || content.replace(/<[^>]*>/g, '').trim() === ''
 
   return (
     <main className="flex-1 overflow-y-auto bg-gray-100 py-6 px-4">
@@ -586,35 +736,96 @@ function CenterEditor({ device, title, sapo, content, titleWords, sapoWords, onT
         </div>
 
         {/* Content + Insert Toolbar */}
-        <div className="px-8 py-4 min-h-[60vh] relative">
-          <div className="flex items-center gap-1 mb-4 p-2 bg-gray-50 border border-gray-200 rounded-lg flex-wrap">
-            {[
-              { icon: <ImgIcon />, label: 'Ảnh' },
-              { icon: <VideoIcon />, label: 'Video' },
-              { icon: <AudioIcon />, label: 'Audio' },
-              { icon: <QuoteIcon />, label: 'Trích dẫn' },
-              { icon: <TableIcon />, label: 'Bảng' },
-              { icon: <HtmlIcon />, label: 'HTML' },
-              { icon: <EmbedIcon />, label: 'Nhúng' },
-              { icon: <SearchIcon />, label: 'Tìm kiếm' },
-            ].map(({ icon, label }) => (
-              <button
-                key={label}
-                title={label}
-                className="flex items-center gap-1 px-2 py-1.5 text-[11px] text-gray-500 rounded hover:bg-white hover:text-gray-800 hover:shadow-sm transition-all border border-transparent hover:border-gray-200"
-              >
-                {icon}
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-
-          <textarea
-            value={content}
-            onChange={(e) => onContentChange(e.target.value)}
-            placeholder="Hãy viết gì đó..."
-            className="w-full text-base text-gray-700 placeholder-gray-300 border-none outline-none resize-none leading-relaxed min-h-[50vh]"
+        <div className="px-8 py-4 min-h-[60vh]">
+          {/* Hidden file inputs */}
+          <input
+            ref={imgInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) handleInlineImageUpload(file)
+              e.target.value = ''
+            }}
           />
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/mp4,video/webm"
+            className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) handleVideoUpload(file)
+              e.target.value = ''
+            }}
+          />
+
+          {/* ContentEditable */}
+          <div className="relative min-h-[50vh]">
+            {isEmpty && (
+              <div className="absolute top-0 left-0 pointer-events-none select-none">
+                <p className="text-base text-gray-300">Hãy viết gì đó...</p>
+                {/* Gợi ý thêm media — chỉ hiện khi trống */}
+                <div className="flex items-center gap-2 mt-4 pointer-events-auto">
+                  <button
+                    onClick={() => imgInputRef.current?.click()}
+                    disabled={uploadingInline}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 rounded-full border border-dashed border-gray-300 hover:border-[#17a2b8] hover:text-[#17a2b8] transition-all disabled:opacity-50"
+                  >
+                    {uploadingInline
+                      ? <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                      : <ImgIcon />
+                    }
+                    {uploadingInline ? 'Đang tải...' : 'Thêm ảnh'}
+                  </button>
+                  <button
+                    onClick={() => videoInputRef.current?.click()}
+                    disabled={uploadingVideo}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 rounded-full border border-dashed border-gray-300 hover:border-[#17a2b8] hover:text-[#17a2b8] transition-all disabled:opacity-50"
+                  >
+                    {uploadingVideo
+                      ? <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                      : <VideoIcon />
+                    }
+                    {uploadingVideo ? 'Đang tải...' : 'Thêm video'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {/* Nút nhỏ góc trên phải — luôn hiện khi đã có nội dung */}
+            {!isEmpty && (
+              <div className="absolute top-0 right-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => imgInputRef.current?.click()}
+                  disabled={uploadingInline}
+                  title="Chèn ảnh"
+                  className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:border-[#17a2b8] hover:text-[#17a2b8] bg-white shadow-sm transition-all disabled:opacity-50"
+                >
+                  {uploadingInline ? <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <ImgIcon />}
+                </button>
+                <button
+                  onClick={() => videoInputRef.current?.click()}
+                  disabled={uploadingVideo}
+                  title="Chèn video"
+                  className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:border-[#17a2b8] hover:text-[#17a2b8] bg-white shadow-sm transition-all disabled:opacity-50"
+                >
+                  {uploadingVideo ? <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <VideoIcon />}
+                </button>
+              </div>
+            )}
+            <div
+              ref={contentDivRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={(e) => {
+                const html = e.currentTarget.innerHTML
+                lastSyncedContent.current = html
+                onContentChange(html)
+              }}
+              className="w-full text-base text-gray-700 outline-none leading-relaxed min-h-[50vh] focus:outline-none"
+            />
+          </div>
         </div>
       </div>
     </main>
@@ -624,329 +835,272 @@ function CenterEditor({ device, title, sapo, content, titleWords, sapoWords, onT
 /* ═══════════════════════════════════════════════════════ */
 /*  RIGHT PANEL ICONS                                     */
 /* ═══════════════════════════════════════════════════════ */
-function RightPanelIcons({ activePanel, onToggle }: {
-  activePanel: RightPanel
-  onToggle: (panel: RightPanel) => void
-}) {
-  const icons: { panel: RightPanel; icon: React.ReactNode; label: string }[] = [
-    { panel: 'info', icon: <InfoIcon />, label: 'Thông tin' },
-    { panel: 'author', icon: <AuthorIcon />, label: 'Tác giả' },
-    { panel: 'comment', icon: <CommentIcon />, label: 'Bình luận' },
-    { panel: 'settings', icon: <SettingsIcon />, label: 'Cài đặt' },
-    { panel: 'seo', icon: <SeoIcon />, label: 'SEO' },
-    { panel: 'ai', icon: <AIBiIcon />, label: 'AI Bi' },
-  ]
-
-  return (
-    <aside className="w-12 bg-white border-l border-gray-200 flex flex-col items-center py-2 gap-1 flex-shrink-0">
-      {icons.map(({ panel, icon, label }) => (
-        <button
-          key={panel}
-          onClick={() => onToggle(panel)}
-          title={label}
-          className={`w-10 h-10 flex flex-col items-center justify-center rounded-lg transition-all gap-0.5 ${
-            activePanel === panel
-              ? 'bg-[#17a2b8] text-white shadow-sm'
-              : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
-          }`}
-        >
-          {icon}
-        </button>
-      ))}
-    </aside>
-  )
-}
-
 /* ═══════════════════════════════════════════════════════ */
-/*  RIGHT PANEL CONTENT                                   */
+/*  INFO PANEL — luôn hiển thị bên phải                   */
 /* ═══════════════════════════════════════════════════════ */
-function RightPanelContent({ panel, thumbnail, uploadingImg, onImageUpload, onClearThumbnail, onClose }: {
-  panel: RightPanel
-  thumbnail: string
-  uploadingImg: boolean
-  onImageUpload: (file: File) => void
-  onClearThumbnail: () => void
-  onClose: () => void
+function InfoPanel({
+  articleType, content, sapo, selectedCatSlug,
+  thumbnail, uploadingImg, onImageUpload, onClearThumbnail,
+  publishDate, onPublishDateChange, sourceUrl, onSourceUrlChange,
+  videoUrl, onVideoUrlChange, streamUrl, onStreamUrlChange,
+  scheduledAt, onScheduledAtChange,
+  steps, onStepsChange, qaItems, onQaItemsChange,
+  ingredients, onIngredientsChange, cookingTime, onCookingTimeChange, servings, onServingsChange,
+}: {
+  articleType: string
+  content: string; sapo: string; selectedCatSlug: string | null
+  thumbnail: string; uploadingImg: boolean
+  onImageUpload: (file: File) => void; onClearThumbnail: () => void
+  publishDate: string; onPublishDateChange: (v: string) => void
+  sourceUrl: string; onSourceUrlChange: (v: string) => void
+  videoUrl: string; onVideoUrlChange: (v: string) => void
+  streamUrl: string; onStreamUrlChange: (v: string) => void
+  scheduledAt: string; onScheduledAtChange: (v: string) => void
+  steps: {title:string;content:string;image:string}[]; onStepsChange: (v: {title:string;content:string;image:string}[]) => void
+  qaItems: {question:string;answer:string}[]; onQaItemsChange: (v: {question:string;answer:string}[]) => void
+  ingredients: string; onIngredientsChange: (v: string) => void
+  cookingTime: string; onCookingTimeChange: (v: string) => void
+  servings: string; onServingsChange: (v: string) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [seoTab, setSeoTab] = useState<'seo' | 'content' | 'heading'>('seo')
-  const [aiTab, setAiTab] = useState('all')
-  const [keyword, setKeyword] = useState('')
-  const [googleTitle, setGoogleTitle] = useState('')
-  const [googleDesc, setGoogleDesc] = useState('')
-  const [publishDate, setPublishDate] = useState('')
 
-  const titles: Record<NonNullable<RightPanel>, string> = {
-    info: 'Thông Tin Cơ Bản',
-    author: 'Tác Giả & Phân Phối',
-    comment: 'Thêm Bình Luận',
-    settings: 'Cài Đặt',
-    seo: 'SEO Chi Tiết',
-    ai: 'Bi - Trợ lý tin',
+  const rule = CLIENT_TYPE_RULES[articleType] ?? CLIENT_TYPE_RULES['size_m']
+  const wordCount = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean).length
+
+  // Checklist items
+  const checks: { label: string; ok: boolean; note?: string }[] = []
+  if (rule.minWords > 0) checks.push({ label: `Nội dung`, ok: wordCount >= rule.minWords, note: `${wordCount}/${rule.minWords} từ` })
+  if (rule.requireSapo) checks.push({ label: 'Sapo', ok: !!sapo.trim() })
+  if (rule.requireThumbnail) checks.push({ label: 'Thumbnail', ok: !!thumbnail })
+  if (rule.requireCategory) checks.push({ label: 'Chuyên mục', ok: !!selectedCatSlug })
+  if (rule.requireVideoUrl) checks.push({ label: 'URL video', ok: !!videoUrl.trim() })
+  if (rule.requireStreamUrl) checks.push({ label: 'URL stream', ok: !!streamUrl.trim() })
+  if (rule.requireSteps) checks.push({ label: 'Các bước', ok: steps.length >= 2, note: `${steps.length} bước` })
+  if (rule.requireQaItems) checks.push({ label: 'Cặp hỏi-đáp', ok: qaItems.length >= 2, note: `${qaItems.length} cặp` })
+
+  const ready = checks.every(c => c.ok)
+
+  const addStep = () => onStepsChange([...steps, { title: '', content: '', image: '' }])
+  const updateStep = (i: number, field: 'title' | 'content' | 'image', val: string) => {
+    const next = steps.map((s, idx) => idx === i ? { ...s, [field]: val } : s)
+    onStepsChange(next)
   }
+  const removeStep = (i: number) => onStepsChange(steps.filter((_, idx) => idx !== i))
+
+  const addQa = () => onQaItemsChange([...qaItems, { question: '', answer: '' }])
+  const updateQa = (i: number, field: 'question' | 'answer', val: string) => {
+    const next = qaItems.map((q, idx) => idx === i ? { ...q, [field]: val } : q)
+    onQaItemsChange(next)
+  }
+  const removeQa = (i: number) => onQaItemsChange(qaItems.filter((_, idx) => idx !== i))
 
   return (
-    <div className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-        <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">
-          {panel && titles[panel]}
-        </span>
-        <button onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+    <aside className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0 overflow-y-auto">
+      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Thông tin bài viết</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {panel === 'info' && (
-          <div className="p-4 space-y-4">
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-2">Ảnh Đại Diện</label>
+      <div className="p-4 space-y-5">
 
-              {/* Input file ẩn — click vào vùng ảnh sẽ mở dialog chọn file */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                className="hidden"
-                onChange={e => {
-                  const file = e.target.files?.[0]
-                  if (file) onImageUpload(file)
-                  e.target.value = ''
-                }}
-              />
-
-              {thumbnail ? (
-                /* ── Đã có ảnh: hiện preview + nút đổi / xóa ── */
-                <div className="relative group">
-                  <img
-                    src={thumbnail}
-                    alt="Thumbnail"
-                    className="w-full h-40 object-cover rounded-lg border border-gray-200"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-3 py-1.5 bg-white text-gray-800 text-xs font-semibold rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      Đổi ảnh
-                    </button>
-                    <button
-                      onClick={onClearThumbnail}
-                      className="px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600 transition-colors"
-                    >
-                      Xóa
-                    </button>
-                  </div>
+        {/* ── Checklist sẵn sàng gửi duyệt ── */}
+        {checks.length > 0 && (
+          <div className={`rounded-lg border p-3 ${ready ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+            <div className="flex items-center gap-1.5 mb-2">
+              {ready
+                ? <svg className="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+                : <svg className="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+              }
+              <span className={`text-[11px] font-bold uppercase tracking-wide ${ready ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {ready ? 'Sẵn sàng gửi duyệt' : 'Chưa đủ điều kiện'}
+              </span>
+            </div>
+            <div className="space-y-1">
+              {checks.map((c, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  {c.ok
+                    ? <svg className="w-3 h-3 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                    : <svg className="w-3 h-3 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+                  }
+                  <span className={`text-[11px] ${c.ok ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
+                    {c.label}{c.note ? ` (${c.note})` : ''}
+                  </span>
                 </div>
-              ) : (
-                /* ── Chưa có ảnh: vùng click để upload ── */
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingImg}
-                  className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#17a2b8] transition-colors group disabled:opacity-50"
-                >
-                  {uploadingImg ? (
-                    <>
-                      <div className="w-6 h-6 border-2 border-[#17a2b8] border-t-transparent rounded-full animate-spin mx-auto mb-2"/>
-                      <p className="text-xs text-[#17a2b8]">Đang tải lên...</p>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-8 h-8 mx-auto text-gray-300 group-hover:text-[#17a2b8] mb-2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <p className="text-xs text-gray-400 group-hover:text-[#17a2b8] transition-colors">Click để tải ảnh lên</p>
-                      <p className="text-[10px] text-gray-300 mt-1">JPG, PNG, GIF, WebP</p>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Chú Thích Ảnh</label>
-              <textarea className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8] resize-none" rows={2} placeholder="Nhập chú thích ảnh..." />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Ngày Xuất Bản</label>
-              <input type="datetime-local" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]" />
-            </div>
-            <div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-3.5 h-3.5 rounded accent-[#17a2b8]" />
-                <span className="text-xs text-gray-600">Hiển thị icon chuyên mục</span>
-              </label>
-            </div>
-          </div>
-        )}
-
-        {panel === 'author' && (
-          <div className="p-4 space-y-4">
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Tác Giả</label>
-              <input type="text" placeholder="Nhập tên tác giả..." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Dòng Sự Kiện</label>
-              <input type="text" placeholder="Gắn dòng sự kiện..." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Chủ Đề</label>
-              <input type="text" placeholder="Thêm chủ đề..." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Đề Xuất Hiển Thị</label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]">
-                <option>Tin thông thường</option>
-                <option>Tin nổi bật</option>
-                <option>Tin hot</option>
-                <option>Tin độc quyền</option>
-              </select>
-            </div>
-            <div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-3.5 h-3.5 accent-red-500" />
-                <span className="text-xs text-red-500 font-medium">Đánh dấu bài nhạy cảm</span>
-              </label>
-            </div>
-          </div>
-        )}
-
-        {panel === 'comment' && (
-          <div className="p-4 space-y-3">
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Tên Người Gửi</label>
-              <input type="text" placeholder="Nhập tên..." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Email</label>
-              <input type="email" placeholder="email@example.com" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Nội Dung Bình Luận</label>
-              <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:border-[#17a2b8]">
-                <div className="flex gap-1 p-1.5 border-b border-gray-200 bg-gray-50">
-                  {['B', 'I', 'U'].map((fmt) => (
-                    <button key={fmt} className="w-6 h-6 text-xs text-gray-600 hover:bg-white rounded border border-transparent hover:border-gray-200">{fmt}</button>
-                  ))}
-                </div>
-                <textarea className="w-full px-3 py-2 text-xs focus:outline-none resize-none min-h-[80px]" placeholder="Nhập nội dung bình luận nội bộ..." />
-              </div>
-            </div>
-            <button className="w-full py-2 bg-[#17a2b8] text-white text-xs font-semibold rounded-lg hover:bg-[#138496] transition-colors">
-              Thêm Bình Luận
-            </button>
-          </div>
-        )}
-
-        {panel === 'settings' && (
-          <div className="flex flex-col h-full">
-            <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-              <div className="relative w-14 h-14 flex-shrink-0">
-                <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
-                  <circle cx="28" cy="28" r="22" fill="none" stroke="#f3f4f6" strokeWidth="6" />
-                  <circle cx="28" cy="28" r="22" fill="none" stroke="#ef4444" strokeWidth="6" strokeDasharray="0 138.2" strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-base font-bold text-red-500">0</span>
-                  <span className="text-[8px] text-gray-400">/100</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-700">Điểm SEO</p>
-                <p className="text-[11px] text-red-500 font-medium">⚠️ Cần cải thiện</p>
-              </div>
-            </div>
-            <div className="flex border-b border-gray-200">
-              {(['seo', 'content', 'heading'] as const).map((tab) => (
-                <button key={tab} onClick={() => setSeoTab(tab)} className={`flex-1 py-2 text-[11px] font-semibold transition-colors ${seoTab === tab ? 'text-[#17a2b8] border-b-2 border-[#17a2b8]' : 'text-gray-400 hover:text-gray-600'}`}>
-                  {tab === 'seo' ? 'SEO' : tab === 'content' ? 'Nội Dung' : 'Thẻ Heading'}
-                </button>
               ))}
             </div>
-            <div className="p-4 flex-1">
-              {seoTab === 'seo' && <p className="text-xs text-gray-400">Chưa có từ khóa nào. Thêm từ khóa để cải thiện SEO.</p>}
-              {seoTab === 'content' && <p className="text-xs text-gray-400">Bài viết chưa có nội dung. Hãy viết ít nhất 300 từ.</p>}
-              {seoTab === 'heading' && <p className="text-xs text-gray-400">Chưa có cấu trúc tiêu đề. Thêm H1, H2, H3 vào bài.</p>}
-            </div>
           </div>
         )}
 
-        {panel === 'seo' && (
-          <div className="p-4 space-y-4">
+        {/* ── Ảnh đại diện ── */}
+        <div>
+          <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-2">Ảnh Đại Diện</label>
+          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden"
+            onChange={e => { const file = e.target.files?.[0]; if (file) onImageUpload(file); e.target.value = '' }}/>
+          {thumbnail ? (
+            <div className="relative group">
+              <img src={thumbnail} alt="Thumbnail" className="w-full h-36 object-cover rounded-lg border border-gray-200"/>
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                <button onClick={() => fileInputRef.current?.click()} className="px-3 py-1.5 bg-white text-gray-800 text-xs font-semibold rounded-lg hover:bg-gray-100">Đổi ảnh</button>
+                <button onClick={onClearThumbnail} className="px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600">Xóa</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploadingImg}
+              className="w-full border-2 border-dashed border-gray-300 rounded-lg p-5 text-center hover:border-[#17a2b8] transition-colors group disabled:opacity-50">
+              {uploadingImg
+                ? <><div className="w-5 h-5 border-2 border-[#17a2b8] border-t-transparent rounded-full animate-spin mx-auto mb-2"/><p className="text-xs text-[#17a2b8]">Đang tải lên...</p></>
+                : <><svg className="w-7 h-7 mx-auto text-gray-300 group-hover:text-[#17a2b8] mb-1.5 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  <p className="text-xs text-gray-400 group-hover:text-[#17a2b8] transition-colors">Click để tải ảnh lên</p>
+                  <p className="text-[10px] text-gray-300 mt-0.5">JPG, PNG, GIF, WebP</p></>
+              }
+            </button>
+          )}
+        </div>
+
+        {/* ── Extra fields: Video Tự Chạy ── */}
+        {articleType === 'video_autoplay' && (
+          <div>
+            <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">
+              URL Video <span className="text-red-400">*</span>
+            </label>
+            <input type="url" value={videoUrl} onChange={e => onVideoUrlChange(e.target.value)}
+              placeholder="https://cdn.example.com/video.mp4"
+              className={`w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8] ${!videoUrl.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}/>
+            <p className="text-[10px] text-gray-400 mt-1">Video sẽ tự phát khi đọc bài</p>
+          </div>
+        )}
+
+        {/* ── Extra fields: Livestream ── */}
+        {articleType === 'livestream' && (
+          <div className="space-y-3">
             <div>
               <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">
-                Từ Khóa Chủ Đạo
-                <span className="text-[10px] text-gray-400 ml-1 normal-case font-normal">(tối thiểu 5 ký tự)</span>
+                URL Livestream <span className="text-red-400">*</span>
               </label>
-              <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhập từ khóa chính..." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]" />
+              <input type="url" value={streamUrl} onChange={e => onStreamUrlChange(e.target.value)}
+                placeholder="https://youtube.com/live/..."
+                className={`w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8] ${!streamUrl.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}/>
             </div>
             <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Từ Khóa Phụ</label>
-              <input type="text" placeholder="Thêm từ khóa phụ..." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]" />
+              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Thời gian bắt đầu</label>
+              <input type="datetime-local" value={scheduledAt} onChange={e => onScheduledAtChange(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]"/>
             </div>
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1">
-                Tiêu Đề Google
-                <span className={`ml-1 text-[10px] font-mono ${googleTitle.length > 100 ? 'text-red-500' : 'text-gray-400'}`}>{googleTitle.length}/100</span>
-              </label>
-              <input type="text" value={googleTitle} onChange={(e) => setGoogleTitle(e.target.value)} maxLength={100} placeholder="Tiêu đề hiển thị trên Google..." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1">
-                Mô Tả Google
-                <span className={`ml-1 text-[10px] font-mono ${googleDesc.length > 250 ? 'text-red-500' : 'text-gray-400'}`}>{googleDesc.length}/250</span>
-              </label>
-              <textarea value={googleDesc} onChange={(e) => setGoogleDesc(e.target.value)} maxLength={250} placeholder="Mô tả hiển thị trên Google..." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8] resize-none" rows={3} />
-            </div>
-            <button className="w-full py-2 bg-gradient-to-r from-purple-500 to-[#17a2b8] text-white text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-              <span>✨</span> Gợi ý SEO bằng AI
-            </button>
           </div>
         )}
 
-        {panel === 'ai' && (
-          <div className="flex flex-col h-full">
-            <div className="overflow-x-auto border-b border-gray-200 flex-shrink-0">
-              <div className="flex min-w-max">
-                {[
-                  { id: 'all', label: 'Tất cả' },
-                  { id: 'saved', label: 'Đã lưu' },
-                  { id: 'unedited', label: 'Chưa biên tập' },
-                  { id: 'editing', label: 'Đang biên tập' },
-                  { id: 'edited', label: 'Đã biên tập' },
-                  { id: 'used', label: 'Đã sử dụng' },
-                ].map(({ id, label }) => (
-                  <button key={id} onClick={() => setAiTab(id)} className={`px-3 py-2 text-[11px] font-semibold whitespace-nowrap transition-colors ${aiTab === id ? 'text-[#17a2b8] border-b-2 border-[#17a2b8]' : 'text-gray-400 hover:text-gray-600'}`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
+        {/* ── Extra fields: Wiki-How steps ── */}
+        {articleType === 'wiki_how' && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Các bước <span className="text-red-400">*</span>
+              </label>
+              <button onClick={addStep} className="text-[10px] text-[#17a2b8] hover:text-[#138496] font-semibold">+ Thêm bước</button>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-gray-100 bg-gray-50 flex-shrink-0">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-[10px] text-gray-500">Cập nhật mỗi 4 phút</span>
-            </div>
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
-              {aiNewsItems.map((item, i) => (
-                <div key={i} className="p-3 hover:bg-gray-50 cursor-pointer transition-colors">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold text-[#17a2b8]">{item.source}</span>
-                    <span className="text-[9px] text-gray-400">{item.time}</span>
+            {steps.length === 0 && (
+              <p className="text-[11px] text-red-400 italic">Cần ít nhất 2 bước để gửi duyệt</p>
+            )}
+            <div className="space-y-3">
+              {steps.map((step, i) => (
+                <div key={i} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-[#17a2b8]">Bước {i + 1}</span>
+                    <button onClick={() => removeStep(i)} className="text-[10px] text-red-400 hover:text-red-600">Xóa</button>
                   </div>
-                  <p className="text-[11px] text-gray-700 leading-snug">{item.title}</p>
-                  <div className="flex gap-1 mt-1.5">
-                    <button className="px-2 py-0.5 text-[9px] bg-[#17a2b8] text-white rounded hover:bg-[#138496] transition-colors">Biên tập</button>
-                    <button className="px-2 py-0.5 text-[9px] border border-gray-300 text-gray-500 rounded hover:bg-gray-100 transition-colors">Lưu</button>
-                  </div>
+                  <input value={step.title} onChange={e => updateStep(i, 'title', e.target.value)}
+                    placeholder="Tiêu đề bước..."
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-[#17a2b8] mb-1.5 bg-white"/>
+                  <textarea value={step.content} onChange={e => updateStep(i, 'content', e.target.value)}
+                    placeholder="Mô tả chi tiết bước này..." rows={2}
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-[#17a2b8] resize-none bg-white"/>
                 </div>
               ))}
             </div>
+            {steps.length > 0 && (
+              <button onClick={addStep} className="mt-2 w-full py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-400 hover:border-[#17a2b8] hover:text-[#17a2b8] transition-colors">
+                + Thêm bước
+              </button>
+            )}
           </div>
         )}
+
+        {/* ── Extra fields: Nấu Ăn ── */}
+        {articleType === 'cooking' && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Nguyên liệu</label>
+              <textarea value={ingredients} onChange={e => onIngredientsChange(e.target.value)}
+                placeholder={"- 2 quả trứng\n- 100g bột mì\n- 200ml sữa"}
+                rows={4} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8] resize-none"/>
+              <p className="text-[10px] text-gray-400 mt-0.5">Mỗi nguyên liệu trên một dòng</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Thời gian</label>
+                <input value={cookingTime} onChange={e => onCookingTimeChange(e.target.value)} placeholder="30 phút"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[#17a2b8]"/>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Khẩu phần</label>
+                <input value={servings} onChange={e => onServingsChange(e.target.value)} placeholder="2 người"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[#17a2b8]"/>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Extra fields: Q&A ── */}
+        {articleType === 'qa' && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Hỏi &amp; Đáp <span className="text-red-400">*</span>
+              </label>
+              <button onClick={addQa} className="text-[10px] text-[#17a2b8] hover:text-[#138496] font-semibold">+ Thêm cặp</button>
+            </div>
+            {qaItems.length === 0 && (
+              <p className="text-[11px] text-red-400 italic">Cần ít nhất 2 cặp hỏi-đáp</p>
+            )}
+            <div className="space-y-3">
+              {qaItems.map((qa, i) => (
+                <div key={i} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-[#17a2b8]">#{i + 1}</span>
+                    <button onClick={() => removeQa(i)} className="text-[10px] text-red-400 hover:text-red-600">Xóa</button>
+                  </div>
+                  <input value={qa.question} onChange={e => updateQa(i, 'question', e.target.value)}
+                    placeholder="Câu hỏi..."
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-[#17a2b8] mb-1.5 bg-white font-medium"/>
+                  <textarea value={qa.answer} onChange={e => updateQa(i, 'answer', e.target.value)}
+                    placeholder="Câu trả lời..." rows={2}
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-[#17a2b8] resize-none bg-white"/>
+                </div>
+              ))}
+            </div>
+            {qaItems.length > 0 && (
+              <button onClick={addQa} className="mt-2 w-full py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-400 hover:border-[#17a2b8] hover:text-[#17a2b8] transition-colors">
+                + Thêm cặp hỏi-đáp
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Ngày xuất bản ── */}
+        <div>
+          <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Ngày Xuất Bản</label>
+          <input type="datetime-local" value={publishDate} onChange={e => onPublishDateChange(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]"/>
+        </div>
+
+        {/* ── Link nguồn gốc ── */}
+        <div>
+          <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Link Nguồn Gốc</label>
+          <input type="url" placeholder="https://vnexpress.net/..." value={sourceUrl} onChange={e => onSourceUrlChange(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#17a2b8]"/>
+          <p className="text-[10px] text-gray-400 mt-1">Để trống nếu là bài viết gốc</p>
+        </div>
       </div>
-    </div>
+    </aside>
   )
 }
 
@@ -960,18 +1114,6 @@ function TopbarLogoSmall() {
 }
 function ImgIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> }
 function VideoIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> }
-function AudioIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4M9 11V7a3 3 0 016 0v4a3 3 0 01-6 0z" /></svg> }
-function QuoteIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg> }
-function TableIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z" /></svg> }
-function HtmlIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg> }
-function EmbedIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg> }
-function SearchIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> }
 function DesktopIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> }
 function TabletIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg> }
 function MobileIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg> }
-function InfoIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> }
-function AuthorIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> }
-function CommentIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg> }
-function SettingsIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> }
-function SeoIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg> }
-function AIBiIcon() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg> }
