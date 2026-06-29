@@ -16,7 +16,8 @@ export async function GET() {
     })
       .sort({ viewCount: -1 })
       .limit(5)
-      .select('title publishedAt viewCount slug sourceUrl')
+      .select('title publishedAt viewCount slug sourceUrl writerId')
+      .populate('writerId', 'fullName username')
       .lean()
 
     // Nếu chưa đủ 5, mở rộng sang 30 ngày
@@ -27,7 +28,8 @@ export async function GET() {
       })
         .sort({ viewCount: -1 })
         .limit(5)
-        .select('title publishedAt viewCount slug sourceUrl')
+        .select('title publishedAt viewCount slug sourceUrl writerId')
+        .populate('writerId', 'fullName username')
         .lean()
     }
 
@@ -36,7 +38,8 @@ export async function GET() {
       articles = await Article.find({ status: 'published' })
         .sort({ viewCount: -1 })
         .limit(5)
-        .select('title publishedAt viewCount slug sourceUrl')
+        .select('title publishedAt viewCount slug sourceUrl writerId')
+        .populate('writerId', 'fullName username')
         .lean()
     }
 

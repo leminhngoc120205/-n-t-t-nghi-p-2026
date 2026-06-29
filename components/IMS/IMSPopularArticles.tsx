@@ -12,6 +12,7 @@ type Article = {
   ctr: number
   bounce: number
   source: number
+  sourceName: string
 }
 
 type Device = 'Desktop' | 'Mobile' | 'Tablet'
@@ -28,18 +29,18 @@ const DEVICE_PROFILE: Record<Device, DeviceProfile> = {
 }
 
 const ARTICLE_POOL: Article[] = [
-  { title: 'Apple Intelligence chính thức hỗ trợ tiếng Việt từ iOS 19, người dùng trong nước phấn khích',              publishedAt: '2026-06-01T22:10:00Z', viewCount: 1540, ctr: 11.30, bounce: 93.20, source: 95 }, // 0
-  { title: 'Bộ Giáo dục công bố điểm sàn xét tuyển đại học 2026, nhiều ngành hot tăng mạnh',                          publishedAt: '2026-05-31T06:45:00Z', viewCount: 1203, ctr: 9.77,  bounce: 94.15, source: 92 }, // 1
-  { title: 'VinFast ra mắt mẫu xe điện giá 400 triệu, cạnh tranh trực tiếp với BYD Atto 3 tại thị trường Việt',       publishedAt: '2026-05-30T11:00:00Z', viewCount:  890, ctr: 7.45,  bounce: 95.60, source: 90 }, // 2
-  { title: 'Ngân hàng Nhà nước hạ lãi suất điều hành lần thứ ba trong năm, tín dụng bất động sản hưởng lợi',          publishedAt: '2026-05-29T14:05:00Z', viewCount:  461, ctr: 2.34,  bounce: 98.71, source: 55 }, // 3
-  { title: 'Hà Nội trải qua đợt nắng nóng kỷ lục 42°C, chuyên gia cảnh báo nguy cơ đột quỵ nhiệt',                   publishedAt: '2026-05-29T08:15:00Z', viewCount:  712, ctr: 6.21,  bounce: 96.44, source: 78 }, // 4
-  { title: 'Việt Nam lọt top 5 điểm đến du lịch hè được tìm kiếm nhiều nhất Đông Nam Á năm 2026',                     publishedAt: '2026-05-29T09:30:00Z', viewCount:  680, ctr: 5.88,  bounce: 97.02, source: 72 }, // 5
-  { title: 'Chứng khoán Việt Nam lập đỉnh lịch sử, VN-Index vượt mốc 1.500 điểm trong phiên sáng',                   publishedAt: '2026-05-31T10:50:00Z', viewCount:  398, ctr: 1.95,  bounce: 99.10, source: 48 }, // 6
-  { title: 'TP.HCM thí điểm thu phí ô tô vào trung tâm từ tháng 8, mức phí từ 40.000 đến 100.000 đồng/lượt',         publishedAt: '2026-05-30T16:20:00Z', viewCount:  774, ctr: 4.12,  bounce: 97.88, source: 68 }, // 7
-  { title: 'Báo cáo: 68% người Việt dưới 35 tuổi chi hơn 3 triệu đồng/tháng cho đồ ăn ngoài',                        publishedAt: '2026-06-01T08:00:00Z', viewCount:  641, ctr: 5.10,  bounce: 96.90, source: 74 }, // 8
-  { title: "Hồ sơ chấn động: Dòng tiền BYD đã kiệt quệ, nợ 'khủng' 45 tỷ USD, từng chiếm dụng vốn nhà cung ứng",    publishedAt: '2026-05-28T07:59:00Z', viewCount:  522, ctr: 3.17,  bounce: 98.08, source: 65 }, // 9
-  { title: 'Cục Hàng không cảnh báo tình trạng vé máy bay hè bị "thổi giá", đề nghị các hãng kiểm soát',             publishedAt: '2026-05-31T15:33:00Z', viewCount:  567, ctr: 3.66,  bounce: 98.22, source: 63 }, // 10
-  { title: 'Tôi không biết Apple 20 năm nữa ra sao, nhưng Samsung thì tôi biết',                                       publishedAt: '2026-05-28T13:42:00Z', viewCount:  539, ctr: 3.09,  bounce: 99.26, source: 70 }, // 11
+  { title: 'Apple Intelligence chính thức hỗ trợ tiếng Việt từ iOS 19, người dùng trong nước phấn khích',              publishedAt: '2026-06-01T22:10:00Z', viewCount: 1540, ctr: 11.30, bounce: 93.20, source: 95, sourceName: 'Nguyễn Minh Vũ' }, // 0
+  { title: 'Bộ Giáo dục công bố điểm sàn xét tuyển đại học 2026, nhiều ngành hot tăng mạnh',                          publishedAt: '2026-05-31T06:45:00Z', viewCount: 1203, ctr: 9.77,  bounce: 94.15, source: 92, sourceName: 'Lê Minh Ngọc'   }, // 1
+  { title: 'VinFast ra mắt mẫu xe điện giá 400 triệu, cạnh tranh trực tiếp với BYD Atto 3 tại thị trường Việt',       publishedAt: '2026-05-30T11:00:00Z', viewCount:  890, ctr: 7.45,  bounce: 95.60, source: 90, sourceName: 'Trần Quốc Bảo'  }, // 2
+  { title: 'Ngân hàng Nhà nước hạ lãi suất điều hành lần thứ ba trong năm, tín dụng bất động sản hưởng lợi',          publishedAt: '2026-05-29T14:05:00Z', viewCount:  461, ctr: 2.34,  bounce: 98.71, source: 55, sourceName: 'Phạm Thu Hà'   }, // 3
+  { title: 'Hà Nội trải qua đợt nắng nóng kỷ lục 42°C, chuyên gia cảnh báo nguy cơ đột quỵ nhiệt',                   publishedAt: '2026-05-29T08:15:00Z', viewCount:  712, ctr: 6.21,  bounce: 96.44, source: 78, sourceName: 'Nguyễn Minh Vũ' }, // 4
+  { title: 'Việt Nam lọt top 5 điểm đến du lịch hè được tìm kiếm nhiều nhất Đông Nam Á năm 2026',                     publishedAt: '2026-05-29T09:30:00Z', viewCount:  680, ctr: 5.88,  bounce: 97.02, source: 72, sourceName: 'Lê Minh Ngọc'   }, // 5
+  { title: 'Chứng khoán Việt Nam lập đỉnh lịch sử, VN-Index vượt mốc 1.500 điểm trong phiên sáng',                   publishedAt: '2026-05-31T10:50:00Z', viewCount:  398, ctr: 1.95,  bounce: 99.10, source: 48, sourceName: 'Trần Quốc Bảo'  }, // 6
+  { title: 'TP.HCM thí điểm thu phí ô tô vào trung tâm từ tháng 8, mức phí từ 40.000 đến 100.000 đồng/lượt',         publishedAt: '2026-05-30T16:20:00Z', viewCount:  774, ctr: 4.12,  bounce: 97.88, source: 68, sourceName: 'Phạm Thu Hà'   }, // 7
+  { title: 'Báo cáo: 68% người Việt dưới 35 tuổi chi hơn 3 triệu đồng/tháng cho đồ ăn ngoài',                        publishedAt: '2026-06-01T08:00:00Z', viewCount:  641, ctr: 5.10,  bounce: 96.90, source: 74, sourceName: 'Nguyễn Minh Vũ' }, // 8
+  { title: "Hồ sơ chấn động: Dòng tiền BYD đã kiệt quệ, nợ 'khủng' 45 tỷ USD, từng chiếm dụng vốn nhà cung ứng",    publishedAt: '2026-05-28T07:59:00Z', viewCount:  522, ctr: 3.17,  bounce: 98.08, source: 65, sourceName: 'Lê Minh Ngọc'   }, // 9
+  { title: 'Cục Hàng không cảnh báo tình trạng vé máy bay hè bị "thổi giá", đề nghị các hãng kiểm soát',             publishedAt: '2026-05-31T15:33:00Z', viewCount:  567, ctr: 3.66,  bounce: 98.22, source: 63, sourceName: 'Trần Quốc Bảo'  }, // 10
+  { title: 'Tôi không biết Apple 20 năm nữa ra sao, nhưng Samsung thì tôi biết',                                       publishedAt: '2026-05-28T13:42:00Z', viewCount:  539, ctr: 3.09,  bounce: 99.26, source: 70, sourceName: 'Phạm Thu Hà'   }, // 11
 ]
 
 function applyDevice(pool: Article[], device: Device, isMock: boolean): Article[] {
@@ -85,6 +86,9 @@ export const IMSPopularArticles = () => {
       if (data.ok && data.data?.length > 0) {
         setPool(data.data.map((a: any) => {
           const seed = parseInt((a._id as string)?.slice(-4) ?? '0', 16)
+          const writer = a.writerId as { fullName?: string; username?: string } | null
+          const sourceName = writer?.fullName || writer?.username ||
+            (a.sourceUrl ? (() => { try { return new URL(a.sourceUrl).hostname.replace('www.', '') } catch { return 'Nguồn ngoài' } })() : 'Nội bộ')
           return {
             _id:         a._id,
             title:       a.title,
@@ -95,6 +99,7 @@ export const IMSPopularArticles = () => {
             ctr:    +((seed % 1000) / 100 + 1).toFixed(2),
             bounce: +((seed % 600)  / 100 + 92).toFixed(2),
             source: (seed % 40) + 55,
+            sourceName,
           }
         }))
         setIsMock(false)
@@ -213,11 +218,9 @@ export const IMSPopularArticles = () => {
                     </span>
                   </td>
                   <td className="px-3 py-3 text-center">
-                    <div className="flex justify-center">
-                      <div className="w-16 h-4 bg-gray-100 rounded overflow-hidden">
-                        <div className="h-full bg-orange-400 rounded transition-all duration-500" style={{ width: `${article.source}%` }} />
-                      </div>
-                    </div>
+                    <span className="text-[11px] text-gray-700 font-medium truncate max-w-[90px] block" title={article.sourceName}>
+                      {article.sourceName}
+                    </span>
                   </td>
                 </tr>
               )
